@@ -103,11 +103,18 @@ func (page *Page) SetProperties(m map[string]interface{}, onlyIfMatch string) (e
     return
 }
 
+// Delete still needs work.  For now, it just marks it as deleted and
+// forgets most of the data it stores.  Actually reclaiming all
+// storage would have to be done differently, since there are pointers
+// to this page.  Also, what about ACLs and what etag to use if one
+// re-creates this URL?  (etags need to be like "20141204-3" maybe,
+// assuming we can remember deleted pages for a day.)
 func (page *Page) Delete() {
     page.Lock()
     page.deleted = true
     page.contentType = ""
     page.content = ""
+	page.appData = make(map[string]interface{})
     page.touched()
     page.Unlock()
 }
@@ -186,11 +193,16 @@ func (page *Page) WaitForNoneMatch(etag string) {
 }
 
 type Pod struct {
-    Page
-    url           string // which should be the same as URL(), but that's recursive
+    sync.RWMutex  
+    rootPage      *Page
+    url           string
     cluster       *Cluster
     pages         map[string]*Page
     newPageNumber uint64
+}
+
+func (pod *Pod) URL() string {
+    return pod.url
 }
 
 //func (pod *Pod) Pages() Selection {
@@ -227,6 +239,10 @@ func (pod *Pod) NewPage() (page *Page, etag string) {
 }
 func (pod *Pod) PageByPath(path string, mayCreate bool) (page *Page, created bool) {
     pod.Lock()
+	defer pod.Unlock()
+
+	// fmt.Printf("pagebypath: %s", path);
+
     page, _ = pod.pages[path]
     if mayCreate && page == nil {
         page = &Page{}
@@ -235,18 +251,27 @@ func (pod *Pod) PageByPath(path string, mayCreate bool) (page *Page, created boo
         pod.pages[path] = page
         created = true
         pod.podTouched()
+		return
     }
     if mayCreate && page.deleted {
         page.deleted = false
         created = true
         // trusting you'll set the content, and that'll trigger a TOUCHED
+		return
     }
-    pod.Unlock()
-    return
+	if !mayCreate && page != nil && page.deleted {
+		page = nil
+		return
+	}
+	return
 }
+
 func (pod *Pod) PageByURL(url string, mayCreate bool) (page *Page, created bool) {
     path := url[len(pod.url):]
-    if len(path) == 0 || path[0] != '/' {
+	if path == "" {
+		path = "/"
+	}
+    if path[0] != '/' {
         // panic("paths must start with a slash")
         return nil, false
     }
@@ -293,7 +318,7 @@ func (cluster *Cluster) Pods() (result []*Pod) {
 }
 
 func (cluster *Cluster) NewPod(url string) (pod *Pod, existed bool) {
-    //  !!!!!!!    comment out only to test soemthing.
+    //  !!!!!!!    commenting out only to test soemthing.
     //cluster.Lock()
     //defer cluster.Unlock()
 
@@ -306,10 +331,9 @@ func (cluster *Cluster) NewPod(url string) (pod *Pod, existed bool) {
     pod.pages = make(map[string]*Page)
     cluster.pods[url] = pod
     existed = false
-    // and, as a page
-    pod.path = ""
-    pod.pod = pod
-    // leave content zero for now
+	pod.rootPage,_ = pod.PageByPath("/", true)
+	pod.rootPage.Set("_isPod", true)
+	// fill in more about the user....?
     cluster.clusterTouched()
     return
 }
@@ -437,6 +461,7 @@ func (page *Page) Set(prop string, value interface{}) {
         handled := page.extraSetter(prop, value)
         if handled { return }
     }
+	// Why do we special case these...?
     if prop == "_contentType" {
         page.contentType = value.(string)
         return
