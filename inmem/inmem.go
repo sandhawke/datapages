@@ -55,7 +55,7 @@ func (page *Page) Path() string {
     return page.path
 }
 func (page *Page) URL() string {
-    return page.pod.url + page.path
+    return page.pod.urlWithSlash + page.path
 }
 
 func (page *Page) Content(accept []string) (contentType string, content string, etag string) {
@@ -195,14 +195,14 @@ func (page *Page) WaitForNoneMatch(etag string) {
 type Pod struct {
     sync.RWMutex  
     rootPage      *Page
-    url           string
+    urlWithSlash  string  // just to be clear pod urls MUST end in slash
     cluster       *Cluster
     pages         map[string]*Page
     newPageNumber uint64
 }
 
 func (pod *Pod) URL() string {
-    return pod.url
+    return pod.urlWithSlash
 }
 
 //func (pod *Pod) Pages() Selection {
@@ -222,7 +222,7 @@ func (pod *Pod) NewPage() (page *Page, etag string) {
     pod.Lock()
     var path string
     for {
-        path = fmt.Sprintf("/a%d", pod.newPageNumber)
+        path = fmt.Sprintf("a%d", pod.newPageNumber)
         pod.newPageNumber++
         if _, taken := pod.pages[path]; !taken {
             break
@@ -267,14 +267,10 @@ func (pod *Pod) PageByPath(path string, mayCreate bool) (page *Page, created boo
 }
 
 func (pod *Pod) PageByURL(url string, mayCreate bool) (page *Page, created bool) {
-    path := url[len(pod.url):]
-	if path == "" {
-		path = "/"
+	if len(url) <= len(pod.urlWithSlash) {
+		return nil, false
 	}
-    if path[0] != '/' {
-        // panic("paths must start with a slash")
-        return nil, false
-    }
+    path := url[len(pod.urlWithSlash):]
     return pod.PageByPath(path, mayCreate)
 }
 
@@ -327,7 +323,11 @@ func (cluster *Cluster) NewPod(url string) (pod *Pod, existed bool) {
     }
     pod = &Pod{}
     pod.cluster = cluster
-    pod.url = url
+	if !strings.HasSuffix(url, "/") {
+		// or should we flag an error?   eh, this seems okay.
+		url = url+"/"
+	}
+	pod.urlWithSlash = url
     pod.pages = make(map[string]*Page)
     cluster.pods[url] = pod
     existed = false
@@ -351,7 +351,7 @@ func (cluster *Cluster) PageByURL(url string, mayCreate bool) (page *Page, creat
     cluster.RLock()
     defer cluster.RUnlock()
     for _, pod := range cluster.pods {
-        if strings.HasPrefix(url, pod.url) {
+        if strings.HasPrefix(url, pod.urlWithSlash) {
             page, created = pod.PageByURL(url, mayCreate)
             return
         }
@@ -433,7 +433,7 @@ func (page *Page) Get(prop string) (value interface{}, exists bool) {
     if prop == "_owner" { 
         //if page.pod == nil { return interface{}(page).(*Cluster).url, true }
         if page.pod == nil { return "", false }
-        return page.pod.url, true
+        return page.pod.urlWithSlash, true
     }
     if prop == "_lastModified" {
         return page.lastModified.Format(time.RFC3339Nano), true
