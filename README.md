@@ -1,7 +1,5 @@
 
-TBD
+coming soon...?
 
-Used by mapleseed
 
-see doc.go ?
 
