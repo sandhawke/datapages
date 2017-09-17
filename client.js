@@ -16,9 +16,12 @@ class DB extends EventEmitter {
     this.deltas = []
     this.pages = new Map()
 
-    this.conn.on('replay-complete', () => { debug('got replay-complete') })
+    this.conn.on('replay-complete', () => {
+      debug('handling replay-complete')
+    })
 
     this.conn.on('delta', delta => {
+      debug('handling delta %o', delta)
       this.deltas.push(delta)
       this.applyDeltaLocally(delta)
     })
@@ -34,7 +37,8 @@ class DB extends EventEmitter {
       page = { __localID: id }
       this.pages.set(id, page)
     }
-    page[delta.property] = delta.value
+    page[delta.key] = delta.value
+    debug('applyDelta resulted in %o', page)
   }
 
   get (id) {

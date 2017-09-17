@@ -18,8 +18,8 @@
 */
 
 class IDMapper {
-  constructor () {
-    this.idCounter = 0
+  constructor (counter = 0) {
+    this.idCounter = counter
     this.contextSpecials = new WeakMap()
     this.idmaps = new Map()
   }

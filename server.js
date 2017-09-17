@@ -21,38 +21,49 @@ class Server extends webgram.Server {
   constructor (config) {
     super(config)   // it copies all config to this.*
     if (!this.deltaDB) this.openDB()
-    this.maxSeq = 0
-    this.idmapper = new IDMapper()
+    this.maxSeq = undefined // set by start()
+    this.idmapper = undefined // set by start()
 
     webgramSessions.attach(this)
 
-    this.subscribers = new Set()
-
     this.on('$close', (conn) => {
-      debug('closing connection, removing watcher')
-      this.subscribers.delete(conn)
+      debug('closing connection, remove watcher')
+      this.off('$delta-saved', conn.deltaSavedHandler)
     })
 
     this.on('subscribe', async (conn, options) => {
       debug('handling subscribe', options)
-      debug('before: size=', this.subscribers.size,
-            'this is session', conn.sessionData._sessionID)
+      // We need to buffer all the notifications that occur between
+      // now and the time the from-disk reply is done.  LevelDB will
+      // only replay up to the delta where the replay started, even if
+      // more are added during the replay.
+      let buffer = []
+      const send = pair => {
+        const [idmap, delta] = pair
+        delta.targetLocalID = idmap.intoContext(conn)
+        conn.send('delta', delta)
+      }
+      conn.deltaSavedHandler = (...pair) => {
+        if (buffer) {
+          buffer.push(pair)
+        } else {
+          send(pair)
+        }
+      }
+      this.on('$delta-saved', conn.deltaSavedHandler)
+      
       if (options.since !== undefined) {
         await this.runReplay(conn)
-        // is it possible to drop events between this disk-traversal
-        // and getting added to subscribers?   Maybe we should be buffering
-        // up the events being dispatched, and if the disk-read ever hits
-        // the first one buffered, we stop the disk read and switch to
-        // memory?
+        debug('from-disk replay done')
       }
-      debug('replay done, actually adding to subscribers now')
-      this.subscribers.add(conn)
-      debug('after: size=', this.subscribers.size)
+      debug('starting from-memory replay')
+      for (let pair of buffer) send(pair)
+      buffer = false
+      debug('from-memory replay done; now we are live')
     })
 
     this.on('delta', async (conn, delta) => {
       debug('handling delta', delta)
-      console.log('got delta', delta)
       delta.who = conn.sessionData._sessionID
       delta.when = new Date()
       delta.seq = ++this.maxSeq
@@ -62,6 +73,8 @@ class Server extends webgram.Server {
       this.deltaDB.put(delta.seq, delta)
       debug('saved delta %o', delta)
 
+      this.emit('$delta-saved', idmap, delta)
+      /*
       debug('distributing delta to subscribers, %o', this.subscribers)
       for (let w of this.subscribers) {
         debug('subscriber: %o', w)
@@ -74,12 +87,19 @@ class Server extends webgram.Server {
           console.error('subscriber error', e)
         }
       }
+      */
     })
   }
 
-  async start () {
-    this.maxSeq = await this.bootReplay()
-    await super.start()
+  async innerStart () {
+    debug('start() called')
+    const replay = await this.bootReplay()
+    debug('replay stats: %o', replay)
+    this.maxSeq = replay.maxSeq
+    this.idmapper = new IDMapper(replay.id)
+    debug('calling super.start()')
+    await super.innerStart()
+    debug('super.start() returned')
     console.log('ws at', this.address)
   }
 
@@ -109,19 +129,24 @@ class Server extends webgram.Server {
     return new Promise((resolve, reject) => {
       let count = 0
       let maxSeq = 0
+      let id = 0
+      debug('running bootReplay')
       this.deltaDB.createReadStream()
         .on('data', function (data) {
           count++
-          debug('    %n => %o', data.key, data.value)
+          debug('    %i => %j', data.key, data.value)
           if (data.key > maxSeq) maxSeq = data.key
+          const thisID = data.value.targetLocalID
+          if (thisID > id) id = thisID 
         })
         .on('error', function (err) {
           console.log('Error', err)
           reject(err)
         })
         .on('end', function () {
-          console.log('Database has', count, 'deltas, maxSeq=', maxSeq)
-          resolve(maxSeq)
+          console.log('Database has', count, 'deltas, maxSeq=',
+                      maxSeq, 'maxTarget', id)
+          resolve({maxSeq, id})
         })
     })
   }
