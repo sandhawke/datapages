@@ -9,7 +9,7 @@ class DB extends EventEmitter {
     super()
     Object.assign(this, options)
     if (!this.conn) {
-      this.conn = new webgramSessions.Client(this.serverAddress)
+      this.conn = new webgramSessions.Client(this.serverAddress, options)
     }
 
     this.nextID = -1
@@ -36,8 +36,11 @@ class DB extends EventEmitter {
     if (page === undefined) {
       page = { __localID: id }
       this.pages.set(id, page)
+      this.emit('appear', page)
     }
     page[delta.key] = delta.value
+    this.emit('changed', page, delta)
+    // also emit via the page, by making it an EE?
     debug('applyDelta resulted in %o', page)
   }
 
@@ -69,6 +72,10 @@ class DB extends EventEmitter {
       let value = overlay[key]
       this.conn.send('delta', {targetLocalID, key, value})
     }
+  }
+
+  close () {
+    return this.conn.close()
   }
 }
 

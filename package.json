@@ -26,6 +26,7 @@
     "level": "^1.7.0"
   },
   "devDependencies": {
+    "remove": "^0.1.5",
     "supports-color": "^4.4.0",
     "tap": "^10.7.2",
     "tape": "^4.8.0",
