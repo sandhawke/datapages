@@ -51,7 +51,7 @@ class Server extends webgram.Server {
         }
       }
       this.on('$delta-saved', conn.deltaSavedHandler)
-      
+
       if (options.since !== undefined) {
         await this.runReplay(conn)
         debug('from-disk replay done')
@@ -137,7 +137,7 @@ class Server extends webgram.Server {
           debug('    %i => %j', data.key, data.value)
           if (data.key > maxSeq) maxSeq = data.key
           const thisID = data.value.targetLocalID
-          if (thisID > id) id = thisID 
+          if (thisID > id) id = thisID
         })
         .on('error', function (err) {
           console.log('Error', err)

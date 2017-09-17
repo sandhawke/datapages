@@ -10,7 +10,7 @@ async function start (numberOfClients) {
   // remove.removeSync(__dirname + '/webgram-client-secrets')
   // remove.removeSync(__dirname + '/webgram-server-secrets')
   remove.removeSync(__dirname + '/data.deltas', {ignoreMissiong: true})
-  
+
   const server = new datapages.Server({db: 'skip'})
   await server.start()
 
@@ -36,7 +36,7 @@ test(async (t) => {
   const [s, c1, c2] = await start(2)
   c2.on('changed', page => {
     t.equal(page.name, 'Alice')
-    end(t,s,c1,c2)
+    end(t, s, c1, c2)
   })
   c1.add({name: 'Alice'})
 })

@@ -11,4 +11,3 @@ db.on('changed', (page, delta) => {
   console.log('page changed page=%o', page)
   console.log('  delta=%o', delta)
 })
-
