@@ -1,6 +1,6 @@
 {
   "name": "datapages",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "very simple synchronizing document-style database",
   "main": "index.js",
   "scripts": {
