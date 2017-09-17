@@ -1,0 +1,34 @@
+{
+  "name": "datapages",
+  "version": "0.6.0",
+  "description": "very simple synchronizing document-style database",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && tap --cov test*.js",
+    "coverage": "standard && tap --cov test*.js --coverage-report=lcov",
+    "watch": "watchify client.js -o static/bundle.js -v",
+    "release": "npm version patch && git push --follow-tags && npm publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandhawke/datapages.git"
+  },
+  "author": "Sandro Hawke (http://hawke.org/sandro)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sandhawke/datapages/issues"
+  },
+  "homepage": "https://github.com/sandhawke/datapages#readme",
+  "dependencies": {
+    "bytewise": "^1.1.0",
+    "debug": "^3.0.1",
+    "eventemitter3": "^2.0.3",
+    "level": "^1.7.0"
+  },
+  "devDependencies": {
+    "supports-color": "^4.4.0",
+    "tap": "^10.7.2",
+    "tape": "^4.8.0",
+    "watchify": "^3.9.0"
+  }
+}
