@@ -7,7 +7,7 @@ read/write view of a shared set of "pages" (aka "documents" or
 Changes are tagged with who did them, currenly using webgram
 SessionID.  We may want to use real user identity instead, but maybe
 not, since we might want to distinguish between a change I made on my
-table vs laptop vs incognito mode somewhere.  With SessionIDs we need
+tablet vs laptop vs incognito mode somewhere.  With SessionIDs we need
 to do another level of mapping though, which could get annoying.
 
 API style is inspired by

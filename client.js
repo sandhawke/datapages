@@ -18,6 +18,7 @@ class DB extends EventEmitter {
 
     this.conn.on('replay-complete', () => {
       debug('handling replay-complete')
+      this.emit('stable')
     })
 
     this.conn.on('delta', delta => {
@@ -38,7 +39,12 @@ class DB extends EventEmitter {
       this.pages.set(id, page)
       this.emit('appear', page)
     }
-    page[delta.key] = delta.value
+    let value = delta.value
+    if (delta.type === 'ref') {
+      // turn object number back into actual object
+      value = this.get(value)
+    }
+    page[delta.key] = value
     this.emit('changed', page, delta)
     // also emit via the page, by making it an EE?
     debug('applyDelta resulted in %o', page)
@@ -58,9 +64,7 @@ class DB extends EventEmitter {
     page.__localID = targetLocalID
     this.pages.set(targetLocalID, page)
     for (let key of Object.keys(page)) {
-      if (key.startsWith('__')) continue
-      let value = page[key]
-      this.conn.send('delta', {targetLocalID, key, value})
+      this.sendProperty(page, key, page[key])
     }
   }
 
@@ -68,10 +72,39 @@ class DB extends EventEmitter {
     const targetLocalID = page.__localID
     if (!targetLocalID) throw Error('you can only overlay pages with IDs')
     for (let key of Object.keys(overlay)) {
-      if (key.startsWith('__')) continue
-      let value = overlay[key]
-      this.conn.send('delta', {targetLocalID, key, value})
+      // also set it locally?  I dunno!
+      this.sendProperty(page, key, overlay[key])
     }
+  }
+
+  sendProperty (page, key, value) {
+    if (key.startsWith('__')) return
+    const targetLocalID = page.__localID
+    let type = typeof value
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        // oh gosh, it depends what it's an array OF!
+        throw Error('array serialization not done yet')
+      } else if (value === null) {
+        type = 'null'
+      } else {
+        if (!value.__localID) {
+          // this ends up recursing through the graph of connected
+          // objects, because add() ends up calling us back here in
+          // sendProperty() on each of its properties, but it's okay
+          // because __localID serves to paint an object as DONE and
+          // avoid looping.
+          this.add(value)
+        }
+        type = 'ref'
+        value = value.__localID
+      }
+    }
+    if (type === 'function') {
+      throw Error(`can't serialize function property ${key} of obj ${targetLocalID}`)
+    }
+
+    this.conn.send('delta', {targetLocalID, key, value, type})
   }
 
   close () {

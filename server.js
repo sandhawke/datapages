@@ -67,9 +67,15 @@ class Server extends webgram.Server {
       delta.who = conn.sessionData._sessionID
       delta.when = new Date()
       delta.seq = ++this.maxSeq
-      const idmap = this.idmapper.fromContext(conn, delta.targetLocalID)
 
+      const idmap = this.idmapper.fromContext(conn, delta.targetLocalID)
       delta.targetLocalID = idmap.intoContext(this.deltaDB)
+
+      if (delta.type === 'ref') {
+        const idmap = this.idmapper.fromContext(conn, delta.value)
+        delta.value = idmap.intoContext(this.deltaDB)
+      }
+
       this.deltaDB.put(delta.seq, delta)
       debug('saved delta %o', delta)
 
