@@ -34,7 +34,7 @@ async function end (t, s, ...cs) {
 }
 
 // lock problems -- can't test both at once
-test.skip('simple propagation between clients', async (t) => {
+test('simple propagation between clients', async (t) => {
   t.plan(1)
   const [s, c1, c2] = await start(2)
   c2.on('changed', page => {
@@ -44,7 +44,7 @@ test.skip('simple propagation between clients', async (t) => {
   c1.add({name: 'Alice'})
 })
 
-test.skip('circular structures move between clients', async (t) => {
+test('circular structures move between clients', async (t) => {
   // standalone version of this in examples/add-loop
   t.plan(5)
   const [s, c1, c2] = await start(2)
@@ -77,7 +77,7 @@ test.skip('circular structures move between clients', async (t) => {
   c1.overlay(aubrey, {thisIsAubrey: true})
 })
 
-test.skip('circular structures with arrays', async (t) => {
+test('circular structures with arrays', async (t) => {
   t.plan(3)
   const [s, c1, c2] = await start(2)
   c2.on('changed', page => {
@@ -137,4 +137,25 @@ test('complex circular structures with arrays', async (t) => {
 
   // flag that it's time for c2 to check what it has
   c1.overlay(aubrey, {thisIsAubrey: true})
+})
+
+test.only('view', async (t) => {
+  t.plan(3)
+  const [s, c1] = await start(1)
+  /*
+    function f (x) {
+    return x.name !== undefined && x.hair !== undefined && x.age > 100
+    }
+  */
+  const v = c1.filter({age: {gr: 100}})
+  v.on('appear', page => {
+    t.equal(page.name, 'Alice')
+    t.equal(page.age, 200)
+    t.equal(page.hair, true)
+    end(t, s, c1)
+  })
+  const obj = {name: 'Alice', age: 20, hair: true}
+  c1.add(obj)
+  c1.overlay(obj, {age: 21})
+  c1.overlay(obj, {age: 200})
 })

@@ -2,7 +2,8 @@
 
 const webgramSessions = require('webgram-sessions')
 const EventEmitter = require('eventemitter3')
-const debug = require('debug')('datapages:client')
+const View = require('./view')
+const debug = require('debug')('datapages_client')
 
 class DB extends EventEmitter {
   constructor (options = {}) {
@@ -56,7 +57,11 @@ class DB extends EventEmitter {
     return page
   }
 
-  entries () {
+  items () {
+    return this.pages.values()
+  }
+
+  entries () {   // deprecated
     return this.pages.entries()
   }
 
@@ -144,6 +149,14 @@ class DB extends EventEmitter {
 
   close () {
     return this.conn.close()
+  }
+
+  filter (f) {
+    return new View({filter: f}, this)
+  }
+
+  view (arg) {
+    return new View(arg, this)
   }
 }
 
