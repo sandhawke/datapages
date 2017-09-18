@@ -31,3 +31,49 @@ test(t => {
 
   t.end()
 })
+
+test('mapTree', t => {
+  const mapper = new IDMapper()
+
+  const alice = { name: 'alice' }
+  const neutral = { name: 'neutral' }
+
+  const tree = [ 1, 'hello', null, [
+    2, { ref: -5 }, 3,
+    5, { ref: 'hello' }]]
+
+  const t2 = mapper.mapTree(alice, neutral, tree)
+  const t3 = mapper.mapTree(neutral, alice, t2)
+
+  // console.log('tree', tree)
+  // console.log('tree2', t2)
+  // console.log('tree3', t3)
+
+  t.notDeepEqual(tree, t2)
+  t.deepEqual(t3, tree)
+
+  t.end()
+})
+
+test('mapTree', t => {
+  const mapper = new IDMapper()
+
+  const alice = { name: 'alice' }
+  const neutral = { name: 'neutral' }
+
+  const tree = [ 1, 'hello', null, [
+    2, { ref: -5 }, 3,
+    5, { ref: 'hello' }]]
+
+  const t2 = mapper.mapTree(alice, neutral, tree)
+  const t3 = mapper.mapTree(neutral, alice, t2)
+
+  // console.log('tree', tree)
+  // console.log('tree2', t2)
+  // console.log('tree3', t3)
+
+  t.notDeepEqual(tree, t2)
+  t.deepEqual(t3, tree)
+
+  t.end()
+})

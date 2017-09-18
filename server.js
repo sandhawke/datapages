@@ -71,10 +71,15 @@ class Server extends webgram.Server {
       const idmap = this.idmapper.fromContext(conn, delta.targetLocalID)
       delta.targetLocalID = idmap.intoContext(this.deltaDB)
 
+      debug('premap value:', delta.value)
+      delta.value = this.idmapper.mapTree(conn, this.deltaDB, delta.value)
+      debug('........post:', delta.value)
+      /*
       if (delta.type === 'ref') {
         const idmap = this.idmapper.fromContext(conn, delta.value)
         delta.value = idmap.intoContext(this.deltaDB)
       }
+      */
 
       this.deltaDB.put(delta.seq, delta)
       debug('saved delta %o', delta)
