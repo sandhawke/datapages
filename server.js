@@ -10,7 +10,7 @@ const cbor = require('borc-refs')
 const webgram = require('webgram')
 const webgramSessions = require('webgram-sessions')
 const IDMapper = require('./idmapper')
-const debug = require('debug')('datapages:server')
+const debug = require('debug')('datapages-server')
 
 // inherit vs attach...?  Hrmmmm.
 //
@@ -24,7 +24,7 @@ class Server extends webgram.Server {
     this.maxSeq = undefined // set by start()
     this.idmapper = undefined // set by start()
 
-    webgramSessions.attach(this)
+    webgramSessions.attach(this, this /*second is for the options */)
 
     this.on('$close', (conn) => {
       debug('closing connection, remove watcher')
@@ -115,7 +115,8 @@ class Server extends webgram.Server {
   }
 
   openDB () {
-    this.deltaDB = level('data.deltas', {
+    debug('openDB')
+    this.deltaDB = level(this.deltasDBName || 'data.deltas', {
       keyEncoding: bytewise,
       valueEncoding: cbor
     })
@@ -134,6 +135,15 @@ class Server extends webgram.Server {
       buffer: true,
       type: 'bytewise'
     }
+    this.closeDB = true
+  }
+
+  async close () {
+    if (this.closeDB) {
+      debug('closing DB')
+      await this.deltaDB.close()
+    }
+    await super.close()
   }
 
   bootReplay () {

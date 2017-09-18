@@ -9,3 +9,4 @@ static/assets/*
 webgram-client-secrets/
 webgram-server-secrets/
 data.deltas/
+test/run/

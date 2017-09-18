@@ -4,21 +4,30 @@ const test = require('tape')
 const datapages = require('.')
 const remove = require('remove')
 const path = require('path')
+const fs = require('fs-extra')
+
+let runCount = 0
 
 async function start (numberOfClients) {
   const result = []
-  // need to make it so we can pass these in better
-  // remove.removeSync(__dirname + '/webgram-client-secrets')
-  // remove.removeSync(__dirname + '/webgram-server-secrets')
-  remove.removeSync(path.join(__dirname,
-                              '/data.deltas'), {ignoreMissiong: true})
 
-  const server = new datapages.Server({db: 'skip'})
+  const root = path.join(__dirname, `/test/run/${++runCount}`)
+  const deltasDBName = path.join(root, '/deltas')
+  const serverSecretsDBName = path.join(root, '/server-secrets')
+  const clientSecretsDBName = (n) => path.join(root, `/client_${n}_secrets`)
+
+  await fs.emptyDir(root)
+  process.chdir(root)
+  console.log('\n\n\nStartup in', process.cwd())
+
+  const server = new datapages.Server({deltasDBName, serverSecretsDBName})
   await server.start()
 
   result.push(server)
-  const opts = {serverAddress: server.address, db: 'skip'}
+
   for (let i = 0; i < numberOfClients; i++) {
+    const opts = {serverAddress: server.address,
+                  clientSecretsDBName: clientSecretsDBName(i)}
     const client = new datapages.DB(opts)
     result.push(client)
   }
@@ -35,7 +44,7 @@ async function end (t, s, ...cs) {
 
 // lock problems -- can't test both at once
 test('simple propagation between clients', async (t) => {
-  t.plan(1)
+  // t.plan(1)
   const [s, c1, c2] = await start(2)
   c2.on('changed', page => {
     t.equal(page.name, 'Alice')
@@ -139,7 +148,7 @@ test('complex circular structures with arrays', async (t) => {
   c1.overlay(aubrey, {thisIsAubrey: true})
 })
 
-test.only('view', async (t) => {
+test('view', async (t) => {
   t.plan(3)
   const [s, c1] = await start(1)
   /*
