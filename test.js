@@ -2,7 +2,6 @@
 
 const test = require('tape')
 const datapages = require('.')
-const remove = require('remove')
 const path = require('path')
 const fs = require('fs-extra')
 
@@ -27,7 +26,7 @@ async function start (numberOfClients) {
 
   for (let i = 0; i < numberOfClients; i++) {
     const opts = {serverAddress: server.address,
-                  clientSecretsDBName: clientSecretsDBName(i)}
+      clientSecretsDBName: clientSecretsDBName(i)}
     const client = new datapages.DB(opts)
     result.push(client)
   }

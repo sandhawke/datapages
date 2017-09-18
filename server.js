@@ -24,7 +24,7 @@ class Server extends webgram.Server {
     this.maxSeq = undefined // set by start()
     this.idmapper = undefined // set by start()
 
-    webgramSessions.attach(this, this /*second is for the options */)
+    webgramSessions.attach(this, this /* second is for the options */)
 
     this.on('$close', (conn) => {
       debug('closing connection, remove watcher')
