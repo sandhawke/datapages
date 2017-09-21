@@ -82,12 +82,12 @@ class View extends EventEmitter {
     return this.members.values()
   }
 
-  add (page) {
+  async add (page) {
     this.check(page)
-    this.base.add(page)
+    await this.base.add(page)
   }
 
-  overlay (page, overlay) {
+  async overlay (page, overlay) {
     // NOT CHECKING, because we don't do the local modify right now
     this.base.overlay(page, overlay)
   }

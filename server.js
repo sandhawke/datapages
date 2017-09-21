@@ -8,7 +8,6 @@ const level = require('level')
 const bytewise = require('bytewise')
 const cbor = require('borc-refs')
 const webgram = require('webgram')
-const webgramSessions = require('webgram-sessions')
 const IDMapper = require('./idmapper')
 const debug = require('debug')('datapages-server')
 
@@ -23,8 +22,6 @@ class Server extends webgram.Server {
     if (!this.deltaDB) this.openDB()
     this.maxSeq = undefined // set by start()
     this.idmapper = undefined // set by start()
-
-    webgramSessions.attach(this, this /* second is for the options */)
 
     this.on('$close', (conn) => {
       debug('closing connection, remove watcher')
@@ -62,7 +59,7 @@ class Server extends webgram.Server {
       debug('from-memory replay done; now we are live')
     })
 
-    this.on('delta', async (conn, delta) => {
+    this.answer.delta = async (conn, delta) => {
       debug('handling delta', delta)
       delta.who = conn.sessionData._sessionID
       delta.when = new Date()
@@ -99,7 +96,10 @@ class Server extends webgram.Server {
         }
       }
       */
-    })
+      return true // confirming that we got it, just in case you're
+                  // not subscribed or don't want to track it that
+                  // way.    We COULD make the return trip optional.
+    }
   }
 
   async innerStart () {

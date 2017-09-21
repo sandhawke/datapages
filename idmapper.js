@@ -69,6 +69,9 @@ class IDMapper {
       return value.map(this.mapTree.bind(this, from, to))
     }
 
+    // our way of encoding dates...   don't touch them
+    if (value.iso8601) return value
+
     const idmap = this.fromContext(from, value.ref)
     // debug('  idmap was', idmap)
     const result = idmap.intoContext(to)

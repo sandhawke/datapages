@@ -90,7 +90,7 @@ class Filter {
         type = 'array'
       }
       */
-        return type === value
+        return left === undefined || type === value
     }
     throw Error('unknown comparison operator ' + JSON.stringify(op))
   }

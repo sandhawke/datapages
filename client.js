@@ -1,6 +1,6 @@
 'use strict'
 
-const webgramSessions = require('webgram-sessions')
+const webgram = require('webgram')
 const EventEmitter = require('eventemitter3')
 const View = require('./view')
 const debug = require('debug')('datapages_client')
@@ -10,7 +10,7 @@ class DB extends EventEmitter {
     super()
     Object.assign(this, options)
     if (!this.conn) {
-      this.conn = new webgramSessions.Client(this.serverAddress, options)
+      this.conn = new webgram.Client(this.serverAddress, options)
     }
 
     this.nextID = -1
@@ -65,26 +65,32 @@ class DB extends EventEmitter {
     return this.pages.entries()
   }
 
-  add (page) {
+  async add (page) {
     if (page.__localID) throw Error('page already has __localID')
     const targetLocalID = this.nextID--
     page.__localID = targetLocalID
     this.pages.set(targetLocalID, page)
+    const all = []
     for (let key of Object.keys(page)) {
-      this.sendProperty(page, key, page[key])
+      all.push(this.sendProperty(page, key, page[key]))
     }
+    debug('waiting for all sendProperties')
+    await Promise.all(all)
+    debug('all sendProperties resolved')
   }
 
-  overlay (page, overlay) {
+  async overlay (page, overlay) {
     const targetLocalID = page.__localID
     if (!targetLocalID) throw Error('you can only overlay pages with IDs')
     for (let key of Object.keys(overlay)) {
       // also set it locally?  I dunno!
-      this.sendProperty(page, key, overlay[key])
+
+      // factor this out with add, and don't use await like this
+      await this.sendProperty(page, key, overlay[key])
     }
   }
 
-  sendProperty (page, key, value) {
+  async sendProperty (page, key, value) {
     if (key.startsWith('__')) return
     const targetLocalID = page.__localID
     value = this.toRef(value)
@@ -93,7 +99,8 @@ class DB extends EventEmitter {
       throw Error(`can't serialize function property ${key} of obj ${targetLocalID}`)
     }
 
-    this.conn.send('delta', {targetLocalID, key, value})
+    await this.conn.ask('delta', {targetLocalID, key, value})
+    debug('delta confirmed')
   }
 
   /*
@@ -107,6 +114,11 @@ class DB extends EventEmitter {
     debug('toRef(%j)', value)
     if (typeof value !== 'object') return value
     if (value === null) return value
+
+    if (value.toISOString) {
+      debug('serializing Date')
+      return {iso8601: value.toISOString()}
+    }
 
     if (Array.isArray(value)) {
       const result = value.map(this.toRef.bind(this))
@@ -143,6 +155,10 @@ class DB extends EventEmitter {
 
     if (Array.isArray(value)) {
       return value.map(this.fromRef.bind(this))
+    }
+    if (value.iso8601) {
+      debug('deserializing date')
+      return new Date(value.iso8601) // is there a better iso parser? joda?
     }
     return this.get(value.ref)
   }
