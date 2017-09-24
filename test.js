@@ -42,7 +42,7 @@ async function end (t, s, ...cs) {
 }
 
 // lock problems -- can't test both at once
-test('simple propagation between clients', async (t) => {
+test.only('simple propagation between clients', async (t) => {
   // t.plan(1)
   const [s, c1, c2] = await start(2)
   c2.on('changed', page => {

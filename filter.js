@@ -1,9 +1,14 @@
 'use strict'
 
-const debug = require('debug')('datapages_filter')
+const debugModule = require('debug')
+
+let seq = 0
 
 class Filter {
-  constructor (arg) {
+  constructor (arg, name) {
+    if (!name) name = ++seq
+    this.debug = debugModule('datapages_filter_' + name)
+
     this.clauses = []
 
     if (typeof arg === 'function') {
@@ -16,10 +21,10 @@ class Filter {
   }
 
   clausify (template) {
-    debug('clausify %o', template)
+    this.debug('clausify %o', template)
     for (let prop of Object.keys(template)) {
       const spec = template[prop]
-      debug('... prop:', prop, spec)
+      this.debug('... prop:', prop, spec)
       if (typeof spec === 'object') {
         for (let op of Object.keys(spec)) {
           const value = spec[op]
@@ -29,18 +34,18 @@ class Filter {
         this.clauses.push({prop, op: '=', value: spec})
       }
     }
-    debug('clausified to %O', this.clauses)
+    this.debug('clausified to %O', this.clauses)
   }
 
   passes (page) {
-    debug('does this filter pass %o?', page)
+    this.debug('does this filter pass %o?', page)
     for (let clause of this.clauses) {
       if (!this.passesClause(page, clause)) {
-        debug('... no, failing %o', clause)
+        this.debug('... no, failing %o', clause)
         return false
       }
     }
-    debug('... yes')
+    this.debug('... yes')
     return true
   }
 
@@ -72,6 +77,11 @@ class Filter {
       // this signals the value should be included, if exists
       // (but right now we included everything anyway)
         return true
+      case 'required':
+        if (value) {
+          return left !== undefined && left !== null
+        }
+        return true
       case 'in':
         if (Array.isArray(value)) {
           return value.includes(left)
@@ -84,13 +94,21 @@ class Filter {
         return false
       case 'type':
         let type = typeof left
+        this.debug('type of %o is %s', left, type)
+        if (type === 'object') {
+          if (left instanceof Date) {
+            type = 'date'
+          } else {
+            throw Error('cant check object types yet')
+          }
+        }
+        return left === undefined || type === value
       /*
-      if (type === 'object' && Array.isArray(left)) {
+        if (type === 'object' && Array.isArray(left)) {
         // oh, maybe this will confuse JS people.  hrmmm.
         type = 'array'
-      }
+        }
       */
-        return left === undefined || type === value
     }
     throw Error('unknown comparison operator ' + JSON.stringify(op))
   }

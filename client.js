@@ -10,46 +10,54 @@ class DB extends EventEmitter {
     super()
     Object.assign(this, options)
     if (!this.conn) {
-      this.conn = new webgram.Client(this.serverAddress, options)
+      if (this.localMode) {
+        // do nothing
+      } else {
+        this.conn = new webgram.Client(this.serverAddress, options)
+      }
     }
 
     this.nextID = -1
     this.deltas = []
     this.pages = new Map()
 
-    this.conn.on('replay-complete', () => {
-      debug('handling replay-complete')
-      this.emit('stable')
-    })
+    if (this.conn) {
+      this.conn.on('replay-complete', () => {
+        debug('handling replay-complete')
+        this.emit('stable')
+      })
 
-    this.conn.on('delta', delta => {
-      debug('handling delta %o', delta)
-      this.deltas.push(delta)
-      this.applyDeltaLocally(delta)
-    })
+      this.conn.on('delta', delta => {
+        debug('handling delta %o', delta)
+        this.deltas.push(delta)
+        this.applyDeltaLocally(delta)
+      })
 
-    // at some point, we could use localForage or something to retain
-    this.conn.send('subscribe', { since: 0 })
+      // at some point, we could use localForage or something to retain
+      this.conn.send('subscribe', { since: 0 })
+    }
   }
 
   applyDeltaLocally (delta) {
+    debug('applyDeltaLocally %o', delta)
     const page = this.get(delta.targetLocalID, page => {
+      debug('new page, emitting appear')
       this.emit('appear', page)
     })
     let value = this.fromRef(delta.value)
     page[delta.key] = value
-    this.emit('changed', page, delta)
+    this.emit('change', page, delta)
     // also emit via the page, by making it an EE?
     debug('applyDelta resulted in %o', page)
   }
 
   // return the page for this numberic id
   //
-  // if there wasn't one it is created
-  //
+  // if there wasn't one it is created, unless ifCreated === false
+  // if one is created, ifCreated is called (if truthy)
   get (id, ifCreated) {
     let page = this.pages.get(id)
-    if (page === undefined) {
+    if (page === undefined && ifCreated !== false) {
       page = { __localID: id }
       this.pages.set(id, page)
       if (ifCreated) ifCreated(page)
@@ -57,19 +65,25 @@ class DB extends EventEmitter {
     return page
   }
 
+  // make this also @@iterator ?
   items () {
     return this.pages.values()
   }
 
+  /*
   entries () {   // deprecated
     return this.pages.entries()
   }
+  */
 
   async add (page) {
     if (page.__localID) throw Error('page already has __localID')
     const targetLocalID = this.nextID--
     page.__localID = targetLocalID
     this.pages.set(targetLocalID, page)
+    if (this.localMode) {
+      this.emit('appear', page)
+    }
     const all = []
     for (let key of Object.keys(page)) {
       all.push(this.sendProperty(page, key, page[key]))
@@ -99,7 +113,13 @@ class DB extends EventEmitter {
       throw Error(`can't serialize function property ${key} of obj ${targetLocalID}`)
     }
 
-    await this.conn.ask('delta', {targetLocalID, key, value})
+    const delta = {targetLocalID, key, value}
+    if (this.localMode) {
+      this.deltas.push(delta)
+      this.applyDeltaLocally(delta)
+    } else {
+      await this.conn.ask('delta', delta)
+    }
     debug('delta confirmed')
   }
 

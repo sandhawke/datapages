@@ -14,7 +14,7 @@ class View extends EventEmitter {
     if (!options.base) this.base = base
 
     if (!(this.filter.passes)) {
-      this.filter = new Filter(this.filter)
+      this.filter = new Filter(this.filter, this.name)
     }
 
     this.members = new Set()
@@ -30,15 +30,32 @@ class View extends EventEmitter {
       this.emit('disappear', page)
     })
 
-    this.base.on('changed', (page, delta) => {
-      this.consider(page)
+    this.base.on('change', (page, delta) => {
+      const [was, is] = this.consider(page)
+      if (is) {
+        debug('view emiting "change"', was, is)
+        // maybe:  delta.target = page ?
+        this.emit('change', page, delta)
+      }
+    })
+
+    // let this wait, so folks have time to add on-appear handler
+    process.nextTick(() => {
+      let some = false
+      for (let page of this.base.items()) {
+        some = true
+        this.consider(page)
+      }
+      if (some) this.emit('stable')
     })
   }
 
   consider (page) {
     debug('considering %o', page)
     const passes = this.passes(page)
+    let wasIn = false
     if (this.members.has(page)) {
+      wasIn = true
       if (passes) {
         debug('... it still belongs')
       } else {
@@ -55,6 +72,7 @@ class View extends EventEmitter {
         debug('... it still does not belong')
       }
     }
+    return [wasIn, passes]
   }
 
   passes (page) {
@@ -72,9 +90,11 @@ class View extends EventEmitter {
 
   get (...args) {
     const page = this.base.get(...args)
-    // if you do the GET on the view, and it doesn't qualify for the
-    // view, then ... throw error?!
-    this.check(page)
+    if (page) {
+      // if you do the GET on the view, and it doesn't qualify for the
+      // view, then ... throw error?!
+      this.check(page)
+    }
     return page
   }
 
