@@ -5,12 +5,28 @@ const EventEmitter = require('eventemitter3')
 const View = require('./view')
 const debug = require('debug')('datapages_client')
 
+/*
+
+  consider refactoring with DB and Client as different things, so the
+  DB is a local-mode DB, and the Client is bridge to another (remote)
+  DB.  That might limit optimization strategies, though, like NOT
+  storing all the data locally, plus how would the client know to send
+  the views?  Maybe the views are watchable.
+
+ */
+
+let viewAutoNameCount = 0
+
 class DB extends EventEmitter {
   constructor (options = {}) {
     super()
     Object.assign(this, options)
     if (!this.conn) {
       if (this.localMode) {
+        this.conn = {
+          send: () => { throw Error('cant send in localMode') },
+          on: () => { throw Error('no .on() in localMode') }
+        }
         // do nothing
       } else {
         this.conn = new webgram.Client(this.serverAddress, options)
@@ -20,8 +36,9 @@ class DB extends EventEmitter {
     this.nextID = -1
     this.deltas = []
     this.pages = new Map()
+    this.views = {}
 
-    if (this.conn) {
+    if (!this.localMode) {
       this.conn.on('replay-complete', () => {
         debug('handling replay-complete')
         this.emit('stable')
@@ -34,6 +51,8 @@ class DB extends EventEmitter {
       })
 
       // at some point, we could use localForage or something to retain
+
+      // this is for current dumb (send-everything) datapage server
       this.conn.send('subscribe', { since: 0 })
     }
   }
@@ -44,11 +63,46 @@ class DB extends EventEmitter {
       debug('new page, emitting appear')
       this.emit('appear', page)
     })
+    delta.__target = page
     let value = this.fromRef(delta.value)
     page[delta.key] = value
     this.emit('change', page, delta)
     // also emit via the page, by making it an EE?
     debug('applyDelta resulted in %o', page)
+  }
+
+  onSince (id, event, func) {
+    // ignore id for now.   you'll get some extra replayed events/objects.
+    //
+    // how to make this work right for views?
+    //
+    // Buffer any new events that might occur during replay.  Even
+    // though this is synchronous code, the callbacks we're calling
+    // might trigger more events.
+    const buffer = []
+    const addToBuffer = (...args) => {
+      buffer.push(args)
+    }
+    this.on(event, addToBuffer)
+
+    if (event === 'appear') {
+      for (const page of this) {
+        func(page)
+      }
+    } else if (event === 'change') {
+      for (const delta of this.deltas) {
+        func(delta)
+      }
+    } else {
+      throw Error(`unexpected onSince event name "${event}"`)
+    }
+
+    while (buffer.length) {
+      const args = buffer.shift()
+      func(...args)
+    }
+
+    this.on(event, func)
   }
 
   // return the page for this numberic id
@@ -76,6 +130,18 @@ class DB extends EventEmitter {
   }
   */
 
+  /*
+     maybe options, or variations?
+
+     like:
+
+     .proxy() / .create() which returns a new live proxy that
+     auto-overlays.
+
+     or a version that uses Object.defineProperty( ) to set a setter
+     on all the current properties, so at least those get trapped?
+
+  */
   async add (page) {
     if (page.__localID) throw Error('page already has __localID')
     const targetLocalID = this.nextID--
@@ -187,13 +253,32 @@ class DB extends EventEmitter {
     return this.conn.close()
   }
 
+  /*
   filter (f) {
-    return new View({filter: f}, this)
+    return this.view({filter: f}, this)
   }
+  */
 
   view (arg) {
-    return new View(arg, this)
+    debug('db creating new view from %o', arg)
+    if (!arg.name) {
+      arg.name = 'auto_' + viewAutoNameCount++
+    }
+    debug('new view named %j', arg.name)
+    const v = new View(arg, this)
+    this.views[arg.name] = v
+    this.emit('view-added', v)
+
+    if (!this.localMode) {
+      // this is for different protocol, implemented by socdb server at
+      // the moment
+      this.conn.send('view-start', arg)
+    }
+
+    return v
   }
 }
+
+DB.prototype[Symbol.iterator] = DB.prototype.items
 
 module.exports.DB = DB

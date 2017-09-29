@@ -2,7 +2,7 @@
 
 const debug = require('debug')('datapages_view')
 const EventEmitter = require('eventemitter3')
-const Filter = require('./filter')
+const Filter = require('./filter').Filter
 
 // base might be a DB() or another "upstream" View.  We're always more
 // restrictive than the base, narrowing which pages appear.
@@ -13,15 +13,16 @@ class View extends EventEmitter {
     Object.assign(this, options)
     if (!options.base) this.base = base
 
-    if (!(this.filter.passes)) {
-      this.filter = new Filter(this.filter, this.name)
+    if (!this.filterObject) {
+      this.filterObject = new Filter(this.filter, this.name)
     }
 
     this.members = new Set()
 
     this.base.on('stable', () => { this.emit('stable') })
 
-    this.base.on('appear', page => {
+    // ONSINCE vs ON
+    this.base.onSince(0, 'appear', page => {
       this.consider(page)
     })
 
@@ -76,10 +77,10 @@ class View extends EventEmitter {
   }
 
   passes (page) {
-    if (this.filter) {
-      return this.filter.passes(page)
-    }
-    return true
+    // if (this.filterObject) {
+    return this.filterObject.passes(page)
+    // }
+    // return true
   }
 
   check (page) {
@@ -117,7 +118,14 @@ class View extends EventEmitter {
   }
 
   view (arg) {
+    console.warn('subviews do not currently participate in the schema')
+    // name them like 'root.sub.subsub' ?
     return new View(arg, this)
+  }
+
+  onSince (...a) {
+    // REALLY need to filter
+    return this.base.onSince(...a)
   }
 }
 

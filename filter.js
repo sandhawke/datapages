@@ -4,6 +4,15 @@ const debugModule = require('debug')
 
 let seq = 0
 
+const canon = {
+  '=': 'eq',
+  '!=': 'ne',
+  '<': 'lt',
+  '<=': 'le',
+  '>': 'gt',
+  '>=': 'ge'
+}
+
 class Filter {
   constructor (arg, name) {
     if (!name) name = ++seq
@@ -16,25 +25,42 @@ class Filter {
       throw Error('user-defined functions not supported')
     }
 
-    this.clausify(arg)
+    this.clausify(arg || {})
     // compile?  it'd be pretty easy, but a little harder to debug
   }
 
   clausify (template) {
     this.debug('clausify %o', template)
+    this.debug('this === template?', this === template)
+    this.debug('CLAUSIFY?! %j', template)
+    this.debug('CLAUSIFY... .clauses:', template.clauses)
+    if (template.debug || template.clauses || template instanceof Filter) throw Error('WTF trap')
+
     for (let prop of Object.keys(template)) {
       const spec = template[prop]
       this.debug('... prop:', prop, spec)
       if (typeof spec === 'object') {
         for (let op of Object.keys(spec)) {
           const value = spec[op]
+          const canonicalOp = canon[op]
+          if (canonicalOp) op = canonicalOp
           this.clauses.push({prop, op, value})
         }
       } else {
-        this.clauses.push({prop, op: '=', value: spec})
+        this.clauses.push({prop, op: 'eq', value: spec})
       }
     }
     this.debug('clausified to %O', this.clauses)
+  }
+
+  // for each eq function, SET that value on page
+  setFixed (page) {
+    if (!page) return
+    for (let clause of this.clauses) {
+      if (clause.op === 'eq') {
+        page[clause.prop] = clause.value
+      }
+    }
   }
 
   passes (page) {
@@ -52,22 +78,16 @@ class Filter {
   passesClause (page, {prop, op, value}) {
     const left = page[prop]
     switch (op) {
-      case '=':
       case 'eq':
         return left === value
-      case '!=':
       case 'ne':
         return left !== value
-      case '<':
       case 'lt':
         return left < value
-      case '<=':
       case 'le':
         return left <= value
-      case '>':
       case 'gr':
         return left > value
-      case '>=':
       case 'ge':
         return left >= value
       case 'exists':
@@ -114,4 +134,14 @@ class Filter {
   }
 }
 
-module.exports = Filter
+// for people who don't want to use view.passes(page) probably because
+// they're not really using real views, just filters...
+function filterForView (view) {
+  if (!view.filterObject) {
+    view.filterObject = new Filter(view.filter, view.name)
+  }
+  return view.filterObject
+}
+
+module.exports.Filter = Filter
+module.exports.filterForView = filterForView
