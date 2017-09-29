@@ -8,6 +8,7 @@
 const EventEmitter = require('eventemitter3')
 const View = require('./view')
 const debug = require('debug')('datapages_db')
+const setdefault = require('setdefault')
 
 let viewAutoNameCount = 0
 
@@ -16,13 +17,29 @@ class DB extends EventEmitter {
     super()
     Object.assign(this, options)
 
-    this.nextID = -1
+    // this.nextID = -1
     this.deltas = []
-    this.rawpages = new Map()   // by id
-    this.proxies = new Map() // by id
-    this.views = {}
+    // this.rawpages = new Map()   // by id
+    // this.proxies = new Map() // by id
+    // this.views = {}
+    this.ee = Symbol('myEventEmitter')
+    this.maxSeqUsed = 0
   }
 
+  replayAfter (seq, event, func) {
+    if (event === 'change') {
+      for (const delta of this.deltas) {
+        if (delta.seq > seq) {
+          func(delta.subject, delta)
+        }
+      }
+      // is it possible to lose any in this gap?  If the func ads
+      // more, will it see them?  see test replayGap
+      this.on('change', func)
+    }
+  }
+  
+  /*
   applyDeltaLocally (delta) {
     debug('applyDeltaLocally %o', delta)
     const page = this.get(delta.targetLocalID, page => {
@@ -40,7 +57,7 @@ class DB extends EventEmitter {
       if (oldValue !== delta.oldValue) throw Error('rigid delta fails')
     }
     delta.oldValue = oldValue
-    */
+    *./
 
     page[delta.key] = value
     this.emit('change', page, delta)
@@ -108,7 +125,7 @@ class DB extends EventEmitter {
   entries () {   // deprecated
     return this.pages.entries()
   }
-  */
+  *./
 
   /*
     Add this specific object to this database.  
@@ -123,7 +140,7 @@ class DB extends EventEmitter {
     pointers remain unchanged, === to its old value.  In contrast,
     .proxy() has to change all those pointers, replacing every object
     with its proxy.
-  */
+  *./
   async add (page) {
     if (page.__localID) throw Error('page already has __localID')
     const targetLocalID = this.nextID--
@@ -142,51 +159,84 @@ class DB extends EventEmitter {
     debug('all sendProperties resolved')
   }
 
+  */
+
   /*
     Create a new proxy, setting its values according to the
     overlay, and return it.  Proxies can be watched for on-change and
     on-save, and when you change them, they automatically start
     propagating the new value.  Because you can watch for 'save', we
-    return synchronously (vs .add() which resolves when saved).
-
-    You can get the raw value behind the proxy with .__rawpage
-
-    If you pass rawpage, we'll use that.  Any properties it has are
-    ignored.  It works okay to pass something as both the overlay and
-    the rawpage; then all the values get property propagated.
+    return synchronously.
    */
-  create(overlay, rawpage = {}) {
+  create(overlay) {
     if (!this.handler) {
       this.handler = {
         get: this.proxyHandlerForGet.bind(this),
         set: this.proxyHandlerForSet.bind(this)
       }
     }
+    const rawpage = {}
     const proxy = new Proxy(rawpage, this.handler)
     rawpage.__proxy = proxy
-    rawpage.__localID = this.nextID--
-    this.rawpages.set(rawpage.__localID, rawpage)
-
-    // id?
-    // save it?
-    
+    this.overlay(proxy, overlay)   // maybe method on proxy?
     return proxy
   }
 
-
-
-  
-
-  async overlay (page, overlay) {
-    const targetLocalID = page.__localID
-    if (!targetLocalID) throw Error('you can only overlay pages with IDs')
+  /*
+    Set a bunch of values at once
+  */
+  overlay (proxy, overlay) {
     for (let key of Object.keys(overlay)) {
-      // also set it locally?  I dunno!
-
-      // factor this out with add, and don't use await like this
-      await this.sendProperty(page, key, overlay[key])
+      proxy[key] = overlay[key]
     }
   }
+
+  proxyHandlerForGet (target, name) {
+    debug('handling GET %j on data %o', name, target)
+    if (name === '__target') {
+      return target
+    } else if (name === 'on' || name === 'off' || name === 'once') {
+      // "this.ee" is the symbol we use to attach this object's EventEmitter,
+      // which we only create when it's first used
+      const ee = setdefault.lazy(target, this.ee, () => new EventEmitter())
+      return ee[name].bind(ee)
+    } else {
+      return target[name]
+    }
+  }
+
+  proxyHandlerForSet (target, name, value, receiver) {
+    debug('handling SET .%j=%o  on data %o', name, value, target)
+    if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
+    this.change(target.__proxy, name, value)
+    return true
+  }
+
+  change (proxyOrTarget, name, value) {
+    const target = proxyOrTarget.__target ? proxyOrTarget.__target : proxyOrTarget
+    const proxy = target.__proxy
+
+    // WISH LIST: check that the value is allowed by all our async Validators
+
+    const oldValue = target[name]
+    if (oldValue === value) {
+      debug('change to same value?')
+      return
+    }
+    if (value === undefined) {
+      delete target[name]   // we don't deal with inheritence, so this is simpler
+    } else {
+      target[name] = value
+    }
+    const seq = ++this.maxSeqUsed
+    const delta = { subject: proxy, property: name, oldValue, value, seq }
+    this.deltas.push(delta)
+    debug('emiting %d delta %o', seq, delta)
+    this.emit('change', proxy, delta)
+    debug('emit done %d', seq)
+  }
+
+    /*  
 
   async sendProperty (page, key, value) {
     if (key.startsWith('__')) return
@@ -209,7 +259,7 @@ class DB extends EventEmitter {
 
     DOES NOT support circular structures made of ONLY ARRAYS.  That is:
     a = [1,2,a] will cause an infinite loop here.  Don't do that.
-  */
+  *./
   toRef (value) {
     debug('toRef(%j)', value)
     if (typeof value !== 'object') return value
@@ -231,7 +281,7 @@ class DB extends EventEmitter {
         out.push(this.toRef(value[i]))
       }
       return out
-      */
+      *./
     }
 
     // must be normal JS object; replace it with a reference to its id
@@ -280,8 +330,9 @@ class DB extends EventEmitter {
     this.emit('view-create', arg)
     return v
   }
+  */
 }
 
-DB.prototype[Symbol.iterator] = DB.prototype.items
+// DB.prototype[Symbol.iterator] = DB.prototype.items
 
 module.exports.DB = DB
