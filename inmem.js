@@ -7,15 +7,21 @@
 
 const EventEmitter = require('eventemitter3')
 const View = require('./view')
-const debug = require('debug')('datapages_db')
+const debugModule = require('debug')
 const setdefault = require('setdefault')
+const util = require('util')
 
 let viewAutoNameCount = 0
+let dbseq = 0
 
-class DB extends EventEmitter {
+class InMem extends EventEmitter {
   constructor (options = {}) {
     super()
     Object.assign(this, options)
+
+    if (!this.name) this.name = '' + ++dbseq
+    this.debug = debugModule('datapages_db_' + this.name)
+    this.objCount = 0
 
     // this.nextID = -1
     this.deltas = []
@@ -24,9 +30,17 @@ class DB extends EventEmitter {
     // this.views = {}
     this.ee = Symbol('myEventEmitter')
     this.maxSeqUsed = 0
+
+
+    this.debug('constructed')
+  }
+
+  inspect () {
+    return `InMem(${this.name})`
   }
 
   listenSince (seq, event, func) {
+    this.debug('new listener')
     if (event === 'change') {
       for (const delta of this.deltas) {
         if (delta.seq > seq) {
@@ -35,6 +49,7 @@ class DB extends EventEmitter {
       }
       // is it possible to lose any in this gap?  If the func ads
       // more, will it see them?  see test replayGap
+      this.debug('replay compelte, adding directly')
       this.on('change', func)
     }
   }
@@ -46,20 +61,32 @@ class DB extends EventEmitter {
     propagating the new value.  Because you can watch for 'save', we
     return synchronously.
    */
-  create(overlay) {
+  create (overlay) {
     if (!this.handler) {
       this.handler = {
         get: this.proxyHandlerForGet.bind(this),
         set: this.proxyHandlerForSet.bind(this)
       }
     }
-    const rawpage = {}
+    const rawpage = { __rawseq: ++this.objCount }
+    // this.debug('rawpage 1 %o', rawpage)
     const proxy = new Proxy(rawpage, this.handler)
-    rawpage.__proxy = proxy
-    this.overlay(proxy, overlay)   // maybe method on proxy?
+    // this.debug('rawpage 2 %o', rawpage)
+    // rawpage.__proxy = proxy
+    // this.debug('rawpage 3 %o', rawpage)
+    if (overlay) this.overlay(proxy, overlay)
+    this.debug('created %o', proxy)
     return proxy
   }
 
+  delete (proxy) {
+    this.setProperty(proxy, '_deleted', true)
+    this.emit('disappear', proxy)
+    // and hope people release their pointers
+
+    // and maybe have some code throw stuff if you access it?
+  }
+  
   /*
     Set a bunch of values at once
 
@@ -71,11 +98,19 @@ class DB extends EventEmitter {
     }
   }
 
-  proxyHandlerForGet (target, name) {
-    debug('handling GET %j on data %o', name, target)
+  proxyHandlerForGet (target, name, receiver) {
+    // this.debug('GET NAME', name)
+    // this.debug('handling GET %j on data %o', name, target)
+    if (target._deleted) throw Error('accessing deleted object')
+    // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
+
+    if (name === util.inspect.custom || name === 'inspect') {
+      return () => 'Proxy_' + this.name + '_' + target.__rawseq
+    }
     if (name === '__target') {
       return target
-    } else if (name === 'on' || name === 'off' || name === 'once') {
+    }
+    if (name === 'on' || name === 'off' || name === 'once') {
       // "this.ee" is the symbol we use to attach this object's EventEmitter,
       // which we only create when it's first used
       const ee = setdefault.lazy(target, this.ee, () => new EventEmitter())
@@ -86,20 +121,23 @@ class DB extends EventEmitter {
   }
 
   proxyHandlerForSet (target, name, value, receiver) {
-    debug('handling SET .%j=%o  on data %o', name, value, target)
-    if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
-    this.setProperty(target.__proxy, name, value)
+    this.debug('handling SET .%j=%o  on data %o', name, value, target)
+    if (target._deleted) throw Error('accessing deleted object')
+    // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
+    this.setProperty(receiver, name, value)
     return true
   }
 
   setProperty (proxy, name, value) {
+    this.debug('setProperty %o %j=%j', proxy, name, value)
     const target = proxy.__target
+    this.debug('  target is %o', target)
 
     // WISH LIST: check that the value is allowed by all our async Validators
 
     const oldValue = target[name]
     if (oldValue === value) {
-      debug('change to same value?')
+      this.debug('change to same value?')
       return
     }
     if (value === undefined) {
@@ -108,11 +146,12 @@ class DB extends EventEmitter {
       target[name] = value
     }
     const seq = ++this.maxSeqUsed
+    // BUG: if this subject: proxy we get a loop
     const delta = { subject: proxy, property: name, oldValue, value, seq }
     this.deltas.push(delta)
-    debug('emiting %d delta %o', seq, delta)
+    this.debug('emiting %d delta %o', seq, delta)
     this.emit('change', proxy, delta)
-    debug('emit done %d', seq)
+    this.debug('emit done %d', seq)
   }
 
   ////////////////////////////////////////////////////////////////
@@ -336,6 +375,6 @@ class DB extends EventEmitter {
   */
 }
 
-// DB.prototype[Symbol.iterator] = DB.prototype.items
+// InMem.prototype[Symbol.iterator] = InMem.prototype.items
 
-module.exports.DB = DB
+module.exports.InMem = InMem

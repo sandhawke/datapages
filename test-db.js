@@ -1,13 +1,27 @@
 'use strict'
 
 const test = require('tape')
-const DB = require('./db').DB
+const InMem = require('./inmem').InMem
 const Bridge = require('./bridge').Bridge
+const debug = require('debug')('datapages_test')
+const util = require('util')
 
+test('debugging labels', t => {
+  const d1 = new InMem({name: 'd1'})
+  t.equal(util.inspect(d1), 'InMem(d1)')
+  
+  const pg = d1.create()
+  t.equal(util.inspect(pg), 'Proxy_d1_1')
+  
+  // d1.setProperty(pg, 'name', 'Peter')
+
+  t.end()
+})
+     
 test('query before add', t => {
-  const d1 = new DB()
+  const d1 = new InMem()
 
-  d1.replayAfter(0, 'change', (page, delta) => {
+  d1.listenSince(0, 'change', (page, delta) => {
     t.equal(page.name, 'Peter')
     t.equal(delta.subject, page)
     t.equal(delta.property, 'name')
@@ -19,10 +33,10 @@ test('query before add', t => {
 })
 
 test('query after add', t => {
-  const d1 = new DB()
+  const d1 = new InMem()
 
   d1.create({name: 'Peter'})
-  d1.replayAfter(0, 'change', (page, delta) => {
+  d1.listenSince(0, 'change', (page, delta) => {
     t.equal(page.name, 'Peter')
     t.equal(delta.subject, page)
     t.equal(delta.property, 'name')
@@ -45,10 +59,10 @@ function clean (obj) {
 }
 
 test('add property',t => {
-  const d1 = new DB()
+  const d1 = new InMem()
 
   const events = []
-  d1.replayAfter(0, 'change', (pg, delta) => {
+  d1.listenSince(0, 'change', (pg, delta) => {
     events.push(clean(delta))
   })
   const pg = d1.create({name: 'Peter'})
@@ -68,26 +82,22 @@ test('add property',t => {
   t.end()
 })
 
-
-     
-/*
 test.only('bridge changes', t => {
-  const d1 = new DB()
-  const d2 = new DB()
+  const d1 = new InMem({name: 'd1'})
+  const d2 = new InMem({name: 'd2'})
   const b = new Bridge(d1, d2)
 
   // this one runs before the add
-  d2.replayAfter(0, 'change', (page, delta) => {
-    console.log('XXXXXXXX')
+  d2.listenSince(0, 'change', (page, delta) => {
     t.equal(page.name, 'Peter')
     // this one runs after the add
-    d2.replayAfter(0, 'change', (page, delta) => {
+    d2.listenSince(0, 'change', (page, delta) => {
       t.equal(page.name, 'Peter')
       t.end()
     })
   })
-  d1.add({name: 'Peter'})
 
-  t.end()
+  const pg = d1.create()
+  d1.setProperty(pg, 'name', 'Peter')
 })
-*/
+
