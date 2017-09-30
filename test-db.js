@@ -163,20 +163,22 @@ test('bridge changes', t => {
   pg.name = 'Peter'
 })
 
-test.skip('bridge more', t => {
+test('chain of bridges', t => {
   const d1 = new InMem({name: 'd1'})
   const d2 = new InMem({name: 'd2'})
   const d3 = new InMem({name: 'd3'})
   const d4 = new InMem({name: 'd4'})
-  const b = new Bridge(d1, d2, d3, d4)
+  new Bridge(d1, d2)
+  new Bridge(d2, d3)
+  new Bridge(d3, d4)
+  // new Bridge(d1, d3) // no cycles allowed!!
 
   // this one runs before the add
-  d2.listenSince(0, 'change', (page, delta) => {
+  d1.listenSince(0, 'change', (page, delta) => {
     t.equal(page.name, 'Peter')
     // this one runs after the add
     d4.listenSince(0, 'change', (page, delta) => {
       t.equal(page.name, 'Peter')
-      b.stop()
       t.end()
     })
   })
