@@ -6,12 +6,13 @@
 */
 
 const EventEmitter = require('eventemitter3')
-const View = require('./view')
 const debugModule = require('debug')
 const setdefault = require('setdefault')
 const util = require('util')
+// const View = require('./view')
 
-let viewAutoNameCount = 0
+// let viewAutoNameCount = 0
+
 let dbseq = 0
 
 class InMem extends EventEmitter {
@@ -30,7 +31,6 @@ class InMem extends EventEmitter {
     // this.views = {}
     this.ee = Symbol('myEventEmitter')
     this.maxSeqUsed = 0
-
 
     this.debug('constructed')
   }
@@ -53,7 +53,7 @@ class InMem extends EventEmitter {
       this.on('change', func)
     }
   }
-  
+
   /*
     Create a new proxy, setting its values according to the
     overlay, and return it.  Proxies can be watched for on-change and
@@ -86,7 +86,7 @@ class InMem extends EventEmitter {
 
     // and maybe have some code throw stuff if you access it?
   }
-  
+
   /*
     Set a bunch of values at once
 
@@ -117,6 +117,16 @@ class InMem extends EventEmitter {
       return ee[name].bind(ee)
     } else {
       return target[name]
+    }
+  }
+
+  emit (name, ...args) {
+    super.emit(name, ...args)
+    // ALSO emit the on the pg itself, it it has its own event emitter
+    if (name === 'change' || name === 'appear' || name === 'disappear') {
+      const pg = args[0]
+      const ee = pg.__target[this.ee]
+      if (ee) ee.emit(name, ...args)
     }
   }
 
@@ -154,8 +164,8 @@ class InMem extends EventEmitter {
     this.debug('emit done %d', seq)
   }
 
-  ////////////////////////////////////////////////////////////////
-    
+  /// /////////////////////////////////////////////////////////////
+
   /*
   applyDeltaLocally (delta) {
     debug('applyDeltaLocally %o', delta)
@@ -245,7 +255,7 @@ class InMem extends EventEmitter {
   *./
 
   /*
-    Add this specific object to this database.  
+    Add this specific object to this database.
 
     Consider using .proxy instead to make a "smart" object that easier
     to do stuff with.  .add() is necessary, however, if other folks
@@ -278,7 +288,7 @@ class InMem extends EventEmitter {
 
   */
 
-    /*  
+    /*
 
   async sendProperty (page, key, value) {
     if (key.startsWith('__')) return

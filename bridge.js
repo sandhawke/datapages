@@ -1,9 +1,7 @@
 'use strict'
 
-
 // use symbols we add to the proxies/handles but that means they can't
 // be integer ids.   Poop.   weakmap wouldn't work either.
-
 
 const setdefault = require('setdefault')
 const debug = require('debug')('datapages_bridge')
@@ -26,7 +24,7 @@ class Bridge {
         const rev = setdefault.lazy(rev1, src, newMap)
         // now forward(srcObj) = sinkObj
         // and rev(sinkObj) = srcObj
-        
+
         // feed changes from src to sink
         debug('making new listeniner src=%s sink=%s', src.name, sink.name)
         const listener = (pg, delta) => {
@@ -61,9 +59,7 @@ class Bridge {
       obj.off('change', func)
     }
   }
-  
 }
-
 
 /*
 class Bridge {
@@ -116,7 +112,7 @@ class Bridge {
 
           // I'm dubious about the refs getting mapped correctly; I think
           // we'd need another mapper for that.
-          
+
           const odelta = {
             targetLocalID: inOther.__localID,
             key: delta.key,
@@ -132,7 +128,6 @@ class Bridge {
 */
 
 module.exports.Bridge = Bridge
-
 
 // DIFFERENT OBJECT in JS?
 
