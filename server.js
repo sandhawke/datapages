@@ -18,7 +18,7 @@ class Server {
     }
 
     this.transport.on('create', (conn, ...args) => {
-      this.debug('heard create %o from %o', args, conn)
+      this.debug('heard create %o from %o', args, conn.sessionData._sessionID)
       conn.send('create-ok')
     })
   }

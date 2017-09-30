@@ -29,6 +29,10 @@ class Client extends EventEmitter {
     this.debug('create')
     this.transport.send('create', 'foo')
   }
+
+  close () {
+    this.transport.close()
+  }
 }
 
 /*

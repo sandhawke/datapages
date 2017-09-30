@@ -9,24 +9,32 @@ const transport = require('./fake-transport')
 const util = require('util')
 const debug = require('debug')('datapages_test_client_server')
 
-/*
-test('debugging labels', t => {
-  const d1 = new InMem({name: 'd1'})
-  t.equal(util.inspect(d1), 'InMem(d1)')
+function forEachTransport (t, run) {
+  t.test('with fake transport', t => {
+    const f = new transport.Server()
+    const s = new Server({transport: f})
+    const c = new Client({transport: f.connectedClient()})
+    run(t, s, c)
+  })
+  
+  t.test('with webgram', async (t) => {
+    const s = new Server()
+    await s.transport.start()
+    const c = new Client({serverAddress: s.transport.address})
+    run(t, s, c)
+  })
+}
 
-  const pg = d1.create()
-  t.equal(util.inspect(pg), 'Proxy_d1_1')
-
-  // d1.setProperty(pg, 'name', 'Peter')
-
-  t.end()
+test('create client->server', tt => {
+  forEachTransport(tt, (t, s, c) => {
+    c.transport.on('create-ok', () => {
+      c.close()
+      s.close()
+      t.pass()
+      t.end()
+    })
+    
+    c.create()
+  })
 })
-*/
 
-test('create client->server', t => {
-  const f = new transport.Server()
-  const s = new Server({transport: f})
-  const c = new Client({transport: f.connectedClient()})
-
-  c.create()
-})

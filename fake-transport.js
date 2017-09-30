@@ -4,12 +4,18 @@
 
 const EventEmitter = require('eventemitter3')
 
+let connectionCounter = 0
+
 class Server extends EventEmitter {
 
   connectedClient () {
     const client = new Client()
     const conn = new Connection()
 
+    conn.sessionData = {
+      _sessionID: ++connectionCounter
+    }
+    
     conn.send = (...args) => {
       client.emit(...args)
     }
@@ -24,11 +30,15 @@ class Server extends EventEmitter {
 
     return client
   }
+
+  close () {}
 }
 
 class Connection extends EventEmitter {
 }
 
-class Client extends EventEmitter { }
+class Client extends EventEmitter {
+  close () {}
+}
 
 module.exports.Server = Server

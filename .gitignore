@@ -10,3 +10,4 @@ webgram-client-secrets/
 webgram-server-secrets/
 data.deltas/
 test/run/
+webgram-client-secrets.json
