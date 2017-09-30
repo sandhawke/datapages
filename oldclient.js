@@ -1,37 +1,38 @@
 'use strict'
 
-
-const EventEmitter = require('eventemitter3')
 const webgram = require('webgram')
-const debugM = require('debug')
-// const debug = require('debug')('datapages_client')
+const EventEmitter = require('eventemitter3')
+const View = require('./view')
+const debug = require('debug')('datapages_client')
 
-let instanceCounter = 0
+/*
 
-class Client extends EventEmitter {
+  consider refactoring with DB and Client as different things, so the
+  DB is a local-mode DB, and the Client is bridge to another (remote)
+  DB.  That might limit optimization strategies, though, like NOT
+  storing all the data locally, plus how would the client know to send
+  the views?  Maybe the views are watchable.
+
+ */
+
+let viewAutoNameCount = 0
+
+class DB extends EventEmitter {
   constructor (options = {}) {
     super()
     Object.assign(this, options)
-
-    if (!this.debugName) this.debugName = ++instanceCounter
-    if (!this.debug) this.debug = debugM('datapages_client_' + this.debugName)
-
-    if (!this.transport) {
-      this.transport = new webgram.Client(this.serverAddress, options)
+    if (!this.conn) {
+      if (this.localMode) {
+        this.conn = {
+          send: () => { throw Error('cant send in localMode') },
+          on: () => { throw Error('no .on() in localMode') }
+        }
+        // do nothing
+      } else {
+        this.conn = new webgram.Client(this.serverAddress, options)
+      }
     }
 
-    this.transport.on('create-ok', () => {
-      this.debug('heard create-ok')
-    })
-  }
-
-  create () {
-    this.debug('create')
-    this.transport.send('create', 'foo')
-  }
-}
-
-/*
     this.nextID = -1
     this.deltas = []
     this.pages = new Map()
@@ -127,7 +128,7 @@ class Client extends EventEmitter {
   entries () {   // deprecated
     return this.pages.entries()
   }
-  *./
+  */
 
   /*
      maybe options, or variations?
@@ -140,7 +141,7 @@ class Client extends EventEmitter {
      or a version that uses Object.defineProperty( ) to set a setter
      on all the current properties, so at least those get trapped?
 
-  *./
+  */
   async add (page) {
     if (page.__localID) throw Error('page already has __localID')
     const targetLocalID = this.nextID--
@@ -194,7 +195,7 @@ class Client extends EventEmitter {
 
     DOES NOT support circular structures made of ONLY ARRAYS.  That is:
     a = [1,2,a] will cause an infinite loop here.  Don't do that.
-  *./
+  */
   toRef (value) {
     debug('toRef(%j)', value)
     if (typeof value !== 'object') return value
@@ -216,7 +217,7 @@ class Client extends EventEmitter {
         out.push(this.toRef(value[i]))
       }
       return out
-      *./
+      */
     }
 
     // must be normal JS object; replace it with a reference to its id
@@ -256,7 +257,7 @@ class Client extends EventEmitter {
   filter (f) {
     return this.view({filter: f}, this)
   }
-  *./
+  */
 
   view (arg) {
     debug('db creating new view from %o', arg)
@@ -277,7 +278,7 @@ class Client extends EventEmitter {
     return v
   }
 }
-*/
-Client.prototype[Symbol.iterator] = Client.prototype.items
 
-module.exports.Client = Client
+DB.prototype[Symbol.iterator] = DB.prototype.items
+
+module.exports.DB = DB
