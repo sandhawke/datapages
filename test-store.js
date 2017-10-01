@@ -115,7 +115,7 @@ test.only('using temporary files', tt => {
               // this should SYNCRONOUSLY real val, then write the new value,
               // which the next runner will pick up and store into val.
               if (run) db.setProperty(pg, 'level', val + n, n)
-            }, rng() * 10)
+            }, rng() * 2)
           }
         })
       }

@@ -27,7 +27,8 @@
     "d3-dsv": "^1.0.7",
     "debug": "^3.0.1",
     "eventemitter3": "^2.0.3",
-    "level": "^1.7.0"
+    "level": "^1.7.0",
+    "mutexify": "^1.2.0"
   },
   "devDependencies": {
     "fs-extra": "^4.0.2",

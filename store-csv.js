@@ -14,6 +14,7 @@
 const EventEmitter = require('eventemitter3')
 const debugM = require('debug')
 const fs = require('fs')
+const mutexify = require('mutexify')
 const d3 = require('d3-dsv')
 // async wtf const stringify = require('csv-stringify')
 // async wtf const parse = require('csv-parse') 
@@ -30,6 +31,9 @@ class StoreCSV extends EventEmitter {
     if (!this.debugName) this.debugName = ++instanceCounter
     if (!this.debug) this.debug = debugM('datapages_store_csv_' + this.debugName)
 
+    this.lockA = mutexify()
+    this.outbuf = []
+    this.outbufcb = []
     this.fileA = fs.openSync(this.filename, 'a')
     this.debug('file descriptor', this.fileA)
 
@@ -153,31 +157,85 @@ class StoreCSV extends EventEmitter {
       if (when.toISOString()) {
         when = when.toISOString()
       }
-    } 
+    }
+
+    if (this.writeHeader) {
+      this.outbuf.push('seq,subject,property,value,who,when\n')
+      this.writeHeader = false
+    }
+
     const record = [seq, subject, property, value, who, when]
+    this.debug('record: %o', record)
     let output = d3.csvFormatRows([record])
-    this.debug('csv: ', output)
-    if (this.fileA === null) {
-      this.debug('write after close')
-    } else {
-      if (this.writeHeader) {
-        output = 'seq,subject,property,value,who,when\n' + output
-        this.writeHeader = false
+    this.debug('as cvs: %o', output)
+    this.outbuf.push(output + '\n')
+    this.outbufcb.push(() => {
+      this.emit('save', delta, { filename: this.filename })
+    })
+
+    // mutex so that we only have one outstanding fs.appendFile at
+    // once because sometimes (like 1 in 100k calls) they end up being
+    // written out-of-order.  This also makes it easy to buffer up the
+    // writes, which maybe speeds this up a little.
+    this.lockA(release => {
+      this.debug('writing %d lines', this.outbuf.length)
+      if (this.outbuf.length) {
+        if (this.fileA === null) {
+          this.debug('write after close')
+        } else {
+          // atomically make our copies of outbuf and outbufcb
+          const outtext = this.outbuf.join('')
+          const outcbs = this.outbufcb
+          this.outbuf = []
+          this.outbufcb = []
+          // now we can go off while doing the appendFile, and others
+          // can be adding to the new outbuf + outbufcb
+          fs.appendFile(this.fileA, outtext, {encoding: 'utf8'}, (err) => {
+            if (err) throw err
+            release()
+            for (const cb of outcbs) {
+              cb()
+            }
+          })
+          this.outbuf = []
+          this.outbufcb = []
+        }
       }
+    })
+  }
+                       
+
+   
+    
+    /*
+
+      }
+
       if (delta.seq + 1 !== this.nextDeltaID) throw Error('unexpected async')
+
       fs.appendFileSync(this.fileA, output + '\n', {encoding: 'utf8'})
       this.emit('save', delta, { filename: this.filename })
+
       /*
         about once in 100k times, one of these gets delayed and occurs
         in the file slightly out of sequence, so we use Sync instead :-(
 
-      fs.appendFile(this.fileA, output + '\n', {encoding: 'utf8'}, (err) => {
-        if (err) throw err
-        this.emit('save', delta, { filename: this.filename })
+        trying with mutexify, also no working, for other reasons TBD.
+
+        Probably best would be to buffer up all the writes during one write,
+        then proceed with them.  Mutexify should do that nicely.
+
+      this.lockA(release => {
+        this.debug('got lock for %o', output)
+        fs.appendFile(this.fileA, output + '\n', {encoding: 'utf8'}, (err) => {
+          if (err) throw err
+          release()
+          this.emit('save', delta, { filename: this.filename })
+          
+        })
       })
       */
-    }
-  }
 }
+
 
 module.exports.StoreCSV = StoreCSV
