@@ -21,7 +21,7 @@ class Server extends EventEmitter {
     }
 
     client.send = (...args) => {
-      this.emit(args[0], conn, args.slice(1))
+      this.emit(args[0], conn, ...args.slice(1))
       conn.emit(...args)
     }
     

@@ -5,14 +5,14 @@
 const test = require('tape')
 const InMem = require('./inmem').InMem
 const Bridge = require('./bridge').Bridge
-const StoreCSV = require('./store-csv').StoreCSV
+const FlatFile = require('./flatfile')
 const debug = require('debug')('datapages_test_store')
 const fs = require('fs')
 const path = require('path')
 const seedrandom = require('seedrandom')
 
 test('read', t => {
-  const db = new StoreCSV('/etc/passwd')
+  const db = new FlatFile('/etc/passwd')
   db.listenSince(0, 'change', (pg, delta) => {
     debug('heard', delta)
   })
@@ -28,7 +28,7 @@ test.only('using temporary files', tt => {
     
     tt.test('applyDelta', t => {
       const file = path.join(tmp, 't1')
-      const db = new StoreCSV(file)
+      const db = new FlatFile(file)
       db.on('save', delta => {
         t.equal(delta.value, 20)
         const written = fs.readFileSync(file, 'utf8')
@@ -46,7 +46,7 @@ test.only('using temporary files', tt => {
     
     tt.test('applyDelta 3', t => {
       const file = path.join(tmp, 't2')
-      const db = new StoreCSV(file)
+      const db = new FlatFile(file)
       db.on('save', delta => {
         if (delta.value === 40) {
           const written = fs.readFileSync(file, 'utf8')
@@ -62,7 +62,7 @@ test.only('using temporary files', tt => {
     tt.test('read deltas', t => {
       const file = path.join(tmp, 'read-deltas')
       fs.writeFileSync(file, text3, 'utf8')
-      const db = new StoreCSV(file)
+      const db = new FlatFile(file)
       const deltas = []
       db.on('stable', () => {
         debug('stable')
@@ -93,7 +93,7 @@ test.only('using temporary files', tt => {
       // still have issues.
       
       const file = path.join(tmp, 'hammer' + n)
-      const db = new StoreCSV(file)
+      const db = new FlatFile(file)
       const rng = seedrandom(n)
       let run = true
       setTimeout(() => {
@@ -102,7 +102,7 @@ test.only('using temporary files', tt => {
         db.close()
         check()
         // setTimeout(check, 1000)
-      }, 300)
+      }, 200)
 
       let val
       
@@ -128,7 +128,7 @@ test.only('using temporary files', tt => {
 
       function check() {
         debug('now checking')
-        const db = new StoreCSV(file)
+        const db = new FlatFile(file)
         db.on('stable', () => {
           debug('stable, done checking')
           t.pass('deltas did increment in sequence')

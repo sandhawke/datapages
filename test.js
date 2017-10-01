@@ -1,5 +1,5 @@
 'use strict'
-
+/*
 const test = require('tape')
 const datapages = require('.')
 const path = require('path')
@@ -154,7 +154,7 @@ test('view', async (t) => {
     function f (x) {
     return x.name !== undefined && x.hair !== undefined && x.age > 100
     }
-  */
+  *./
   const v = c1.filter({age: {gr: 100}})
   v.on('appear', page => {
     t.equal(page.name, 'Alice')
@@ -167,3 +167,4 @@ test('view', async (t) => {
   c1.overlay(obj, {age: 21})
   c1.overlay(obj, {age: 200})
 })
+*/

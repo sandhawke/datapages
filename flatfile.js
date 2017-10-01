@@ -1,15 +1,16 @@
 'use strict'
+/*
 
-// Just implements the PRIMITIVE interface: on-change, on-save,
-// create(no args), listenSince, setProperty
-//
-// If you want more bridge it to InMem
-//
-//
-// There was kinda-working async, no-storage version of this at
-// https://github.com/sandhawke/datapages/blob/64432ceb79d46ecae85acd4ba709028f973766d8/store-csv.js
-// before I deciding simplicity was much more important
-// than performance (for now)
+  Implements the L1 (primitive) interface
+
+  There was kinda-working version with no storage and all-async, at
+  https://github.com/sandhawke/datapages/blob/64432ceb79d46ecae85acd4ba709028f973766d8/store-csv.js
+  before I deciding simplicity was much more important than
+  performance for now
+
+  TODO maybe add other forms : .jsonl .cbor .nquads 
+
+*/
 
 const EventEmitter = require('eventemitter3')
 const debugM = require('debug')
@@ -22,7 +23,7 @@ const d3 = require('d3-dsv')
 
 let instanceCounter = 0
 
-class StoreCSV extends EventEmitter {
+class FlatFile extends EventEmitter {
   constructor (filename, options = {}) {
     super()
     Object.assign(this, options)
@@ -137,12 +138,12 @@ class StoreCSV extends EventEmitter {
   //     let {subject, property, value, who, when} = delta
 
   setProperty (subject, property, value, who, when) {
-    const seq = this.nextDeltaID++
-    const delta = {seq, subject, property, value, who, when}
+    const delta = {subject, property, value, who, when}
     this.applyDelta(delta)
   }
 
   applyDelta (delta) {
+    if (delta.seq === undefined) delta.seq = this.nextDeltaID++
     this.deltas.add(delta)
     this.emit('change', delta.subject, delta)
 
@@ -238,4 +239,4 @@ class StoreCSV extends EventEmitter {
 }
 
 
-module.exports.StoreCSV = StoreCSV
+module.exports = FlatFile
