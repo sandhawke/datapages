@@ -22,6 +22,7 @@
   "dependencies": {
     "bytewise": "^1.1.0",
     "csv-parse": "^1.2.3",
+    "csv-string": "^2.3.2",
     "csv-stringify": "^1.0.4",
     "debug": "^3.0.1",
     "eventemitter3": "^2.0.3",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "fs-extra": "^4.0.2",
+    "seedrandom": "^2.4.3",
     "supports-color": "^4.4.0",
     "tap": "^10.7.2",
     "tape": "^4.8.0",

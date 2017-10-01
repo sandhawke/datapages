@@ -9,6 +9,7 @@ const StoreCSV = require('./store-csv').StoreCSV
 const debug = require('debug')('datapages_test_store')
 const fs = require('fs')
 const path = require('path')
+const seedrandom = require('seedrandom')
 
 test('read', t => {
   const db = new StoreCSV('/etc/passwd')
@@ -31,7 +32,7 @@ test.only('using temporary files', tt => {
       db.on('save', delta => {
         t.equal(delta.value, 20)
         const written = fs.readFileSync(file, 'utf8')
-        t.equal(written, '1,age,20,,\n')
+        t.equal(written, '1,1,age,20,,\n')
         t.end()
       })
       db.setProperty(1, 'age', 20)
@@ -43,7 +44,7 @@ test.only('using temporary files', tt => {
       db.on('save', delta => {
         if (delta.value === 40) {
           const written = fs.readFileSync(file, 'utf8')
-          t.equal(written, '1,age,21,,\n2,age,22,,\n1,age,40,,\n')
+          t.equal(written, '1,1,age,21,,\n2,2,age,22,,\n3,1,age,40,,\n')
           t.end()
         }
       })
@@ -54,16 +55,66 @@ test.only('using temporary files', tt => {
 
     tt.test('read deltas', t => {
       const file = path.join(tmp, 'read-deltas')
-      const text = '1,age,21,,\n2,age,22,,\n1,age,40,,\n'
+      const text = '1,1,age,21,,\n2,2,age,22,,\n3,1,age,40,,\n'
       fs.writeFileSync(file, text, 'utf8')
       const db = new StoreCSV(file)
+      db.on('stable', () => {
+        debug('stable')
+        t.end()
+      })
       db.listenSince(0, 'change', (pg, delta) => {
         debug('heard', delta)
       })
-      db.on('stable', () => {
-        t.end()
-      })
+    })
+
+    tt.test('hammer', t => {
+      const file = path.join(tmp, 'hammer')
+      const db = new StoreCSV(file)
+      const rng = seedrandom(123456789)
+      let run = true
+      setTimeout(() => {
+        t.comment('aborting, num deltas=' + db.deltas.size)
+        run = false
+        db.close()
+        setTimeout(check, 1000)
+      }, 10)
+
+      let val
+      
+      function runner (n) {
+        db.on('change', (pg, delta) => {
+          val = delta.value
+          debug('runner %d got %o', n, delta)
+          if (run) {
+            setTimeout(() => {
+              db.setProperty(pg, 'level', val + n, n)
+            }, rng() * 10)
+          }
+        })
+      }
+
+      runner(1)
+      runner(-1)
+      runner(2)
+      runner(-2)
+      db.setProperty(db.create(), 'level', 1000, 0)
+
+      function check() {
+        debug('now checking')
+        const db = new StoreCSV(file)
+        db.on('stable', () => {
+          debug('stable, done checking')
+          t.end()
+        })
+        let val = 1000
+        db.listenSince(0, 'change', (pg, delta) => {
+          debug('checking: val %d delta %o', val, delta)
+          t.equal(delta.value, val + delta.who)
+          val = delta.value
+        })
+      }
     })
   })
 })
+
 
