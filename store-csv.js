@@ -29,7 +29,6 @@ class StoreCSV extends EventEmitter {
     if (!this.debugName) this.debugName = ++instanceCounter
     if (!this.debug) this.debug = debugM('datapages_store_csv_' + this.debugName)
 
-    this.str = stringify()
     this.fileA = fs.openSync(this.filename, 'a')
     this.debug('file descriptor', this.fileA)
 
@@ -62,11 +61,13 @@ class StoreCSV extends EventEmitter {
     for (const record of output) {
       this.debug('parsed CSV %j', record)
       let [seq, subject, property, value, who, when] = record
+
       seq = parseInt(seq)
       subject = parseInt(subject)
-      // value = fuck  ... // NEEDS TYPE   OR some JSON cleverness
+      value = JSON.parse(value)
       who = parseInt(who)
-      
+      when = new Date(when)
+
       let delta = {seq, subject, property, value, who, when}
       this.debug(' = delta %o', delta)
       maxS = Math.max(maxS, delta.subject)
@@ -127,8 +128,21 @@ class StoreCSV extends EventEmitter {
     this.emit('change', delta.subject, delta)
 
     let {seq, subject, property, value, who, when} = delta
+    value = JSON.stringify(value)
+    if (when === null) {
+      // 
+    } else {
+      if (when === undefined) {
+        when = new Date()
+      }
+      if (when.toISOString()) {
+        when = when.toISOString()
+      }
+    } 
     const record = [seq, subject, property, value, who, when]
-    stringify([record], (err, output) => {
+    let x = 1
+    stringify([record], {quotedString: true}, (err, output) => {
+      x = 2
       this.debug('csv: ', output)
       if (this.fileA === null) {
         this.debug('write after close')
@@ -139,6 +153,9 @@ class StoreCSV extends EventEmitter {
         })
       }
     })
+    if (x === 1) {
+      throw Error('stupid extra async')
+    }
   }
 }
 

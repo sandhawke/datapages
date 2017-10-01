@@ -32,10 +32,10 @@ test.only('using temporary files', tt => {
       db.on('save', delta => {
         t.equal(delta.value, 20)
         const written = fs.readFileSync(file, 'utf8')
-        t.equal(written, '1,1,age,20,,\n')
+        t.equal(written, '1,1,"age","20",,\n')
         t.end()
       })
-      db.setProperty(1, 'age', 20)
+      db.setProperty(1, 'age', 20, null, null)
     })
 
     tt.test('applyDelta 3', t => {
@@ -44,18 +44,18 @@ test.only('using temporary files', tt => {
       db.on('save', delta => {
         if (delta.value === 40) {
           const written = fs.readFileSync(file, 'utf8')
-          t.equal(written, '1,1,age,21,,\n2,2,age,22,,\n3,1,age,40,,\n')
+          t.equal(written, '1,1,"age","21",,\n2,2,"age","22",,\n3,1,"age","40",,\n')
           t.end()
         }
       })
-      db.setProperty(1, 'age', 21)
-      db.setProperty(2, 'age', 22)
-      db.setProperty(1, 'age', 40)
+      db.setProperty(1, 'age', 21, null, null)
+      db.setProperty(2, 'age', 22, null, null)
+      db.setProperty(1, 'age', 40, null, null)
     })
 
     tt.test('read deltas', t => {
       const file = path.join(tmp, 'read-deltas')
-      const text = '1,1,age,21,,\n2,2,age,22,,\n3,1,age,40,,\n'
+      const text = '1,1,"age","21",,\n2,2,"age","22",,\n3,1,"age","40",,\n'
       fs.writeFileSync(file, text, 'utf8')
       const db = new StoreCSV(file)
       db.on('stable', () => {
@@ -68,16 +68,20 @@ test.only('using temporary files', tt => {
     })
 
     tt.test('hammer', t => {
+      // this fails, for instance, if sometimes delta are written to the file
+      // out of order, as they sometimes are wtf?
+      
       const file = path.join(tmp, 'hammer')
       const db = new StoreCSV(file)
       const rng = seedrandom(123456789)
       let run = true
       setTimeout(() => {
-        t.comment('aborting, num deltas=' + db.deltas.size)
+        t.comment('stopping hammer, num deltas=' + db.deltas.size)
         run = false
         db.close()
-        setTimeout(check, 1000)
-      }, 10)
+        check()
+        // setTimeout(check, 1000)
+      }, 50)
 
       let val
       
@@ -87,7 +91,9 @@ test.only('using temporary files', tt => {
           debug('runner %d got %o', n, delta)
           if (run) {
             setTimeout(() => {
-              db.setProperty(pg, 'level', val + n, n)
+              // this should SYNCRONOUSLY real val, then write the new value,
+              // which the next runner will pick up and store into val.
+              if (run) db.setProperty(pg, 'level', val + n, n)
             }, rng() * 10)
           }
         })
@@ -104,12 +110,16 @@ test.only('using temporary files', tt => {
         const db = new StoreCSV(file)
         db.on('stable', () => {
           debug('stable, done checking')
+          t.pass('deltas did increment in sequence')
           t.end()
         })
         let val = 1000
         db.listenSince(0, 'change', (pg, delta) => {
           debug('checking: val %d delta %o', val, delta)
-          t.equal(delta.value, val + delta.who)
+          if (delta.value !== val + delta.who) {
+            t.comment('bad delta ' + JSON.stringify(delta))
+            t.equal(delta.value, val + delta.who)  // will fail
+          }
           val = delta.value
         })
       }
