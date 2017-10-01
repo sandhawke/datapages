@@ -14,9 +14,10 @@
 const EventEmitter = require('eventemitter3')
 const debugM = require('debug')
 const fs = require('fs')
-const stringify = require('csv-stringify')
+const d3 = require('d3-dsv')
+// async wtf const stringify = require('csv-stringify')
 // async wtf const parse = require('csv-parse') 
-const CSV = require('csv-string') 
+// const CSV = require('csv-string') 
 
 let instanceCounter = 0
 
@@ -36,8 +37,17 @@ class StoreCSV extends EventEmitter {
     // logic simpler, with no risk that we'll drop deltas that are
     // being added while listenSince is doing its replay.
     this.deltas = new Set()
-      
+
+    this.writeHeader = true
     this.boot()
+
+    let nextSave = this.nextDeltaID
+    this.on('save', (delta, details) => {
+      if (nextSave !== delta.seq) {
+        throw Error('bad sequence of saves ' + nextSave + ' --- ' + delta.seq)
+      }
+      nextSave++
+    })
   }
 
   close () {
@@ -51,24 +61,29 @@ class StoreCSV extends EventEmitter {
     this.debug('input as %d chars', input.length)
     let maxS = 0
     let maxD = 0
-    const output = CSV.parse(input, ',')
+    const output = d3.csvParse(input)
     this.debug('parsed whole as %O', output)
+    /*
     if (output.length === 1 && output[0].length === 1 && output[0][0] === '') {
       this.debug('workout bug in CSV, for empty input returns [[""]]')
       output.shift()
     }
-    this.debug('parsed whole as %O', output)
+    */
+    // this.debug('parsed whole as %O', output)
     for (const record of output) {
+      this.writeHeader = false
       this.debug('parsed CSV %j', record)
-      let [seq, subject, property, value, who, when] = record
+      let {seq, subject, property, value, who, when} = record
 
-      seq = parseInt(seq)
-      subject = parseInt(subject)
+      seq = +seq
+      subject = +subject
       value = JSON.parse(value)
-      who = parseInt(who)
-      when = new Date(when)
+      
+      let delta = {seq, subject, property, value}
 
-      let delta = {seq, subject, property, value, who, when}
+      if (who !== '') delta.who = +who
+      if (when !== '') delta.when = new Date(when)
+
       this.debug(' = delta %o', delta)
       maxS = Math.max(maxS, delta.subject)
       maxD = Math.max(maxD, delta.seq)
@@ -140,21 +155,27 @@ class StoreCSV extends EventEmitter {
       }
     } 
     const record = [seq, subject, property, value, who, when]
-    let x = 1
-    stringify([record], {quotedString: true}, (err, output) => {
-      x = 2
-      this.debug('csv: ', output)
-      if (this.fileA === null) {
-        this.debug('write after close')
-      } else {
-        fs.appendFile(this.fileA, output, {encoding: 'utf8'}, (err) => {
-          if (err) throw err
-          this.emit('save', delta, { filename: this.filename })
-        })
+    let output = d3.csvFormatRows([record])
+    this.debug('csv: ', output)
+    if (this.fileA === null) {
+      this.debug('write after close')
+    } else {
+      if (this.writeHeader) {
+        output = 'seq,subject,property,value,who,when\n' + output
+        this.writeHeader = false
       }
-    })
-    if (x === 1) {
-      throw Error('stupid extra async')
+      if (delta.seq + 1 !== this.nextDeltaID) throw Error('unexpected async')
+      fs.appendFileSync(this.fileA, output + '\n', {encoding: 'utf8'})
+      this.emit('save', delta, { filename: this.filename })
+      /*
+        about once in 100k times, one of these gets delayed and occurs
+        in the file slightly out of sequence, so we use Sync instead :-(
+
+      fs.appendFile(this.fileA, output + '\n', {encoding: 'utf8'}, (err) => {
+        if (err) throw err
+        this.emit('save', delta, { filename: this.filename })
+      })
+      */
     }
   }
 }

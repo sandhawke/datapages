@@ -32,19 +32,25 @@ test.only('using temporary files', tt => {
       db.on('save', delta => {
         t.equal(delta.value, 20)
         const written = fs.readFileSync(file, 'utf8')
-        t.equal(written, '1,1,"age","20",,\n')
+        t.equal(written, 'seq,subject,property,value,who,when\n1,1,age,20,,\n')
         t.end()
       })
       db.setProperty(1, 'age', 20, null, null)
     })
 
+    const text3 = `seq,subject,property,value,who,when
+1,1,age,21,,
+2,2,age,22,,
+3,1,age,40,,
+`
+    
     tt.test('applyDelta 3', t => {
       const file = path.join(tmp, 't2')
       const db = new StoreCSV(file)
       db.on('save', delta => {
         if (delta.value === 40) {
           const written = fs.readFileSync(file, 'utf8')
-          t.equal(written, '1,1,"age","21",,\n2,2,"age","22",,\n3,1,"age","40",,\n')
+          t.equal(written, text3)
           t.end()
         }
       })
@@ -55,25 +61,40 @@ test.only('using temporary files', tt => {
 
     tt.test('read deltas', t => {
       const file = path.join(tmp, 'read-deltas')
-      const text = '1,1,"age","21",,\n2,2,"age","22",,\n3,1,"age","40",,\n'
-      fs.writeFileSync(file, text, 'utf8')
+      fs.writeFileSync(file, text3, 'utf8')
       const db = new StoreCSV(file)
+      const deltas = []
       db.on('stable', () => {
         debug('stable')
+        t.deepEqual(deltas, [
+          { seq: 1, subject: 1, property: 'age', value: 21 },
+          { seq: 2, subject: 2, property: 'age', value: 22 },
+          { seq: 3, subject: 1, property: 'age', value: 40 }
+        ])
         t.end()
       })
       db.listenSince(0, 'change', (pg, delta) => {
+        deltas.push(delta)
         debug('heard', delta)
       })
     })
 
-    tt.test('hammer', t => {
-      // this fails, for instance, if sometimes delta are written to the file
-      // out of order, as they sometimes are wtf?
+    tt.test('hammer 1', hammer.bind(null, 1))
+    tt.test('hammer 2', hammer.bind(null, 2))
+    tt.test('hammer 3', hammer.bind(null, 3))
+    tt.test('hammer 4', hammer.bind(null, 4))
+    tt.test('hammer 5', hammer.bind(null, 5))
+
+    function hammer (n, t) {
+      // what this really tests is whether, when using the syncronous
+      // stack, everything is in deterministic order.  This is how I
+      // realized csv-parse wasn't just using a callback, it was
+      // calling the callbacks in random order.  But even without that, we
+      // still have issues.
       
-      const file = path.join(tmp, 'hammer')
+      const file = path.join(tmp, 'hammer' + n)
       const db = new StoreCSV(file)
-      const rng = seedrandom(123456789)
+      const rng = seedrandom(n)
       let run = true
       setTimeout(() => {
         t.comment('stopping hammer, num deltas=' + db.deltas.size)
@@ -81,7 +102,7 @@ test.only('using temporary files', tt => {
         db.close()
         check()
         // setTimeout(check, 1000)
-      }, 50)
+      }, 300)
 
       let val
       
@@ -111,6 +132,7 @@ test.only('using temporary files', tt => {
         db.on('stable', () => {
           debug('stable, done checking')
           t.pass('deltas did increment in sequence')
+          t.comment('test dir was: ' + tmp)
           t.end()
         })
         let val = 1000
@@ -123,7 +145,7 @@ test.only('using temporary files', tt => {
           val = delta.value
         })
       }
-    })
+    }
   })
 })
 
