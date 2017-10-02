@@ -11,7 +11,7 @@ class Bridge {
     // silly, but after I wrote this, I realized this algorithm is all
     // wrong for > 2 dbs, because this makes cycles, and you need a
     // tree to do it this way.
-    if (dbs.length != 2) throw Error('needs exactly two arguments')
+    if (dbs.length !== 2) throw Error('needs exactly two arguments')
     this.dbs = dbs
     this.listens = []
     const map = new Map()

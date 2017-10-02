@@ -8,22 +8,19 @@
   before I deciding simplicity was much more important than
   performance for now
 
-  TODO maybe add other forms : .jsonl .cbor .nquads 
+  TODO maybe add other forms : .jsonl .cbor .nquads
 
 */
 
-const EventEmitter = require('eventemitter3')
 const debugM = require('debug')
 const fs = require('fs')
 const mutexify = require('mutexify')
-const d3 = require('d3-dsv')
-// async wtf const stringify = require('csv-stringify')
-// async wtf const parse = require('csv-parse') 
-// const CSV = require('csv-string') 
+const dsv = require('d3-dsv')
+const BaseDB = require('./basedb')
 
 let instanceCounter = 0
 
-class FlatFile extends EventEmitter {
+class FlatFile extends BaseDB {
   constructor (filename, options = {}) {
     super()
     Object.assign(this, options)
@@ -59,14 +56,14 @@ class FlatFile extends EventEmitter {
     fs.closeSync(this.fileA)
     this.fileA = null
   }
-  
+
   boot () {
     this.debug('booting')
-    const input = fs.readFileSync(this.filename, 'utf8');
+    const input = fs.readFileSync(this.filename, 'utf8')
     this.debug('input as %d chars', input.length)
     let maxS = 0
     let maxD = 0
-    const output = d3.csvParse(input)
+    const output = dsv.csvParse(input)
     this.debug('parsed whole as %O', output)
     /*
     if (output.length === 1 && output[0].length === 1 && output[0][0] === '') {
@@ -83,7 +80,7 @@ class FlatFile extends EventEmitter {
       seq = +seq
       subject = +subject
       value = JSON.parse(value)
-      
+
       let delta = {seq, subject, property, value}
 
       if (who !== '') delta.who = +who
@@ -133,14 +130,9 @@ class FlatFile extends EventEmitter {
     this.debug('listenSince returning')
   }
 
-  // which is better? 
+  // which is better?
   // async applyDelta(delta) {
   //     let {subject, property, value, who, when} = delta
-
-  setProperty (subject, property, value, who, when) {
-    const delta = {subject, property, value, who, when}
-    this.applyDelta(delta)
-  }
 
   applyDelta (delta) {
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
@@ -150,7 +142,7 @@ class FlatFile extends EventEmitter {
     let {seq, subject, property, value, who, when} = delta
     value = JSON.stringify(value)
     if (when === null) {
-      // 
+      //
     } else {
       if (when === undefined) {
         when = new Date()
@@ -167,7 +159,7 @@ class FlatFile extends EventEmitter {
 
     const record = [seq, subject, property, value, who, when]
     this.debug('record: %o', record)
-    let output = d3.csvFormatRows([record])
+    let output = dsv.csvFormatRows([record])
     this.debug('as cvs: %o', output)
     this.outbuf.push(output + '\n')
     this.outbufcb.push(() => {
@@ -204,10 +196,7 @@ class FlatFile extends EventEmitter {
       }
     })
   }
-                       
 
-   
-    
     /*
 
       }
@@ -232,11 +221,10 @@ class FlatFile extends EventEmitter {
           if (err) throw err
           release()
           this.emit('save', delta, { filename: this.filename })
-          
+
         })
       })
       */
 }
-
 
 module.exports = FlatFile

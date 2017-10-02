@@ -7,29 +7,21 @@
 
 */
 
-const EventEmitter = require('eventemitter3')
-const debugM = require('debug')
+const BaseDB = require('./basedb')
 
-let instanceCounter = 0
-
-class MinDB extends EventEmitter {
+class MinDB extends BaseDB {
   constructor (filename, options = {}) {
     super()
     Object.assign(this, options)
-
-    if (!this.debugName) this.debugName = ++instanceCounter
-    if (!this.debug) this.debug = debugM('datapages_mindb_' + this.debugName)
 
     this.deltas = new Set()
 
     this.nextSubjectID = 1
     this.nextDeltaID = 1
-
-    let nextSave = this.nextDeltaID
   }
 
   close () { }
-  
+
   create () {
     let id = this.nextSubjectID++
     this.debug('create() returning %d', id)
@@ -60,5 +52,4 @@ class MinDB extends EventEmitter {
   }
 }
 
-
-module.exports = { MinDB }
+module.exports = MinDB

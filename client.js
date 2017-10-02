@@ -1,13 +1,13 @@
 'use strict'
 
-const EventEmitter = require('eventemitter3')
 const webgram = require('webgram')
 // const refs = require('./refs')
 const debugM = require('debug')
+const BaseDB = require('./basedb')
 
 let instanceCounter = 0
 
-class Client extends EventEmitter {
+class Client extends BaseDB {
   constructor (options = {}) {
     super()
     Object.assign(this, options)
@@ -16,7 +16,7 @@ class Client extends EventEmitter {
     if (!this.debug) this.debug = debugM('datapages_client_' + this.debugName)
 
     // this.refs = refs(this.create.bind(this), this.overlay.bind(this))
-    
+
     this.nextLocalID = -1 // COUNTING -1, -2, -3 ...
 
     if (!this.transport) {
@@ -33,7 +33,7 @@ class Client extends EventEmitter {
   close () {
     this.transport.close()
   }
-  
+
   create () {
     const id = this.nextLocalID--
     this.debug('create returning', id)
@@ -50,8 +50,6 @@ class Client extends EventEmitter {
     this.debug('sending delta %o', delta)
     this.transport.send('delta', delta)
   }
-
-
 }
 
-module.exports.Client = Client
+module.exports = Client

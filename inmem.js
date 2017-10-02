@@ -9,13 +9,14 @@ const EventEmitter = require('eventemitter3')
 const debugModule = require('debug')
 const setdefault = require('setdefault')
 const util = require('util')
+const BaseDB = require('./basedb')
 // const View = require('./view')
 
 // let viewAutoNameCount = 0
 
 let dbseq = 0
 
-class InMem extends EventEmitter {
+class InMem extends BaseDB {
   constructor (options = {}) {
     super()
     Object.assign(this, options)
@@ -387,4 +388,4 @@ class InMem extends EventEmitter {
 
 // InMem.prototype[Symbol.iterator] = InMem.prototype.items
 
-module.exports.InMem = InMem
+module.exports = InMem

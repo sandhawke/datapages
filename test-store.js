@@ -3,8 +3,8 @@
 // factor out test-primative ?
 
 const test = require('tape')
-const InMem = require('./inmem').InMem
-const Bridge = require('./bridge').Bridge
+// const InMem = require('./inmem').InMem
+// const Bridge = require('./bridge').Bridge
 const FlatFile = require('./flatfile')
 const debug = require('debug')('datapages_test_store')
 const fs = require('fs')
@@ -23,9 +23,9 @@ test('read', t => {
 
 test.only('using temporary files', tt => {
   fs.mkdtemp('/tmp/datapages-test-', (err, tmp) => {
-    if (err) throw err;
+    if (err) throw err
     tt.comment('running file tests in: ' + tmp)
-    
+
     tt.test('applyDelta', t => {
       const file = path.join(tmp, 't1')
       const db = new FlatFile(file)
@@ -43,7 +43,7 @@ test.only('using temporary files', tt => {
 2,2,age,22,,
 3,1,age,40,,
 `
-    
+
     tt.test('applyDelta 3', t => {
       const file = path.join(tmp, 't2')
       const db = new FlatFile(file)
@@ -91,7 +91,7 @@ test.only('using temporary files', tt => {
       // realized csv-parse wasn't just using a callback, it was
       // calling the callbacks in random order.  But even without that, we
       // still have issues.
-      
+
       const file = path.join(tmp, 'hammer' + n)
       const db = new FlatFile(file)
       const rng = seedrandom(n)
@@ -105,7 +105,7 @@ test.only('using temporary files', tt => {
       }, 200)
 
       let val
-      
+
       function runner (n) {
         db.on('change', (pg, delta) => {
           val = delta.value
@@ -126,7 +126,7 @@ test.only('using temporary files', tt => {
       runner(-2)
       db.setProperty(db.create(), 'level', 1000, 0)
 
-      function check() {
+      function check () {
         debug('now checking')
         const db = new FlatFile(file)
         db.on('stable', () => {
@@ -148,5 +148,3 @@ test.only('using temporary files', tt => {
     }
   })
 })
-
-

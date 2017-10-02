@@ -4,14 +4,13 @@ const debug = require('debug')('datapages_refs')
 /*
   Given a structured value (objects, arrays), convert to a from
   versions that have no nested objects, and instead use { ref: ID }
-  where there was nesting.   
+  where there was nesting.
 */
 
 function refs (create, overlay) {
-
   const idFor = new Map()   // could be WeakMap, I guess
   const fromID = new Map()
-  
+
   /*
     Given some value, return something we can transmit to indicate
     that value, allowing for object references and loops.
@@ -42,7 +41,7 @@ function refs (create, overlay) {
       id = create()
       idFor.set(value, id)
       fromID.set(id, value)
-      
+
       // Now, this might end up recursing through the graph of connected
       // objects, because overlay() might call us back here, but since
       // we're already in idFor, that won't loop forever.
@@ -66,7 +65,6 @@ function refs (create, overlay) {
     }
     return fromID.get(value.ref)
   }
-
 
   return {to, from}
 }

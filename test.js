@@ -1,4 +1,94 @@
 'use strict'
+
+const test = require('tape')
+const datapages = require('.')
+const fs = require('fs')
+const path = require('path')
+const transport = require('./fake-transport')
+
+const tmp = fs.mkdtempSync('/tmp/datapages-test-')
+let count = 0
+const file = suffix => {
+  const result = path.join(tmp, suffix + '_' + ++count)
+  console.log('# tmp file', result)
+  return result
+}
+
+function FlatFile () {
+  const filename = file('flat')
+  return new datapages.FlatFile(filename)
+}
+
+async function MinDB () {
+  return new datapages.MinDB()
+}
+
+async function InMem () {
+  return new datapages.InMem()
+}
+
+async function ClientImmediateServer () {
+  const f = new transport.Server()
+  const s = new datapages.Server({transport: f, db: new datapages.MinDB()})
+  s.transport.start()
+  const c = new datapages.Client({transport: f.connectedClient()})
+  return c
+}
+
+async function ClientNetworkServer () {
+  const s = new datapages.Server({
+    sessionOptions: {
+      serverSecretsDBName: file('serversecret')
+    },
+    db: new datapages.MinDB()})
+  await s.transport.start()
+  const c = new datapages.Client({serverAddress: s.transport.address})
+  const close = c.close.bind(c)
+  c.close = () => {
+    close()
+    s.close()
+  }
+  return c
+}
+
+for (const maker of [
+  MinDB, InMem, FlatFile,
+  ClientImmediateServer,
+  ClientNetworkServer
+]) {
+  console.log('# for store type', maker.name)
+  test('create-set-listen', async (t) => {
+    const db = await maker()
+    const created = db.create()
+    db.setProperty(created, 'color', 'green')
+    db.listenSince(0, 'change', (pg, delta) => {
+      t.equal(pg, created)
+      t.equal(delta.subject, created)
+      t.equal(delta.property, 'color')
+      t.equal(delta.value, 'green')
+      t.equal(delta.seq, 1)
+      db.close()
+      t.end()
+    })
+  })
+
+  test('listen-create-set', async (t) => {
+    const db = await maker()
+    let created
+    db.listenSince(0, 'change', (pg, delta) => {
+      t.equal(pg, created)
+      t.equal(delta.subject, created)
+      t.equal(delta.property, 'color')
+      t.equal(delta.value, 'green')
+      t.equal(delta.seq, 1)
+      db.close()
+      t.end()
+    })
+    created = db.create()
+    db.setProperty(created, 'color', 'green')
+  })
+}
+
 /*
 const test = require('tape')
 const datapages = require('.')

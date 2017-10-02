@@ -1,11 +1,10 @@
 'use strict'
 
-module.exports.Server = require('./server').Server
-module.exports.DB = require('./client').DB
+const Server = require('./server')
 
-module.exports.InMem = class extends module.exports.DB {
-  constructor (options = {}) {
-    options.localMode = true
-    super(options)
-  }
-}
+const Client = require('./client')
+const InMem = require('./inmem')
+const FlatFile = require('./flatfile')
+const MinDB = require('./mindb')
+
+module.exports = { InMem, FlatFile, MinDB, Client, Server }

@@ -1,16 +1,16 @@
 'use strict'
 
 const test = require('tape')
-const InMem = require('./inmem').InMem
-const MinDB = require('./mindb').MinDB
-const Bridge = require('./bridge').Bridge
-const Client = require('./client').Client
-const Server = require('./server').Server
-const transport = require('./fake-transport')
-const util = require('util')
+// const Bridge = require('./bridge').Bridge
+// const InMem = require('./inmem').InMem
+// const path = require('path')
+// const util = require('util')
+const Client = require('./client')
+const MinDB = require('./mindb')
+const Server = require('./server')
 const debug = require('debug')('datapages_test_client_server')
 const fs = require('fs')
-const path = require('path')
+const transport = require('./fake-transport')
 
 const doWebgram = true
 
@@ -77,7 +77,7 @@ test('delta inbound', tt => {
   forEachTransport(tt, (t, s, c) => {
     const obj = c.create()
     debug('id %j', obj)
-    c.applyDelta({subject: obj, property: 'color', value:'red'})
+    c.applyDelta({subject: obj, property: 'color', value: 'red'})
     s.db.listenSince(0, 'change', (pg, delta) => {
       t.equal(delta.property, 'color')
       t.equal(delta.value, 'red')
@@ -93,7 +93,7 @@ test('delta inbound before', tt => {
   forEachTransport(tt, (t, s, c, c2) => {
     const obj = c2.create()
     debug('id %j', obj)
-    c2.applyDelta({subject: obj, property: 'color', value:'red'})
+    c2.applyDelta({subject: obj, property: 'color', value: 'red'})
     c.listenSince(0, 'change', (pg, delta) => {
       t.equal(delta.property, 'color')
       t.equal(delta.value, 'red')

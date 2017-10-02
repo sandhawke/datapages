@@ -1,13 +1,12 @@
 'use strict'
 
 const test = require('tape')
-const InMem = require('./inmem').InMem
-const Bridge = require('./bridge').Bridge
+const dp = require('.')
 const util = require('util')
 // const debug = require('debug')('datapages_test')
 
 test('debugging labels', t => {
-  const d1 = new InMem({name: 'd1'})
+  const d1 = new dp.InMem({name: 'd1'})
   t.equal(util.inspect(d1), 'InMem(d1)')
 
   const pg = d1.create()
@@ -19,7 +18,7 @@ test('debugging labels', t => {
 })
 
 test('query before add', t => {
-  const d1 = new InMem()
+  const d1 = new dp.InMem()
 
   d1.listenSince(0, 'change', (page, delta) => {
     t.equal(page.name, 'Peter')
@@ -33,7 +32,7 @@ test('query before add', t => {
 })
 
 test('query after add', t => {
-  const d1 = new InMem()
+  const d1 = new dp.InMem()
 
   d1.create({name: 'Peter'})
   d1.listenSince(0, 'change', (page, delta) => {
@@ -59,7 +58,7 @@ function clean (obj) {
 }
 
 test('add property', t => {
-  const d1 = new InMem()
+  const d1 = new dp.InMem()
 
   const events = []
   d1.listenSince(0, 'change', (pg, delta) => {
@@ -95,7 +94,7 @@ test('add property', t => {
 })
 
 test('on-change for object', t => {
-  const d1 = new InMem()
+  const d1 = new dp.InMem()
 
   const events = []
   d1.once('change', (pg, delta) => {
@@ -143,9 +142,10 @@ test('on-change for object', t => {
 })
 
 test('bridge changes', t => {
-  const d1 = new InMem({name: 'd1'})
-  const d2 = new InMem({name: 'd2'})
-  const b = new Bridge(d1, d2)
+  const d1 = new dp.InMem({name: 'd1'})
+  const d2 = new dp.InMem({name: 'd2'})
+  d1.bridge(d2)
+  // const b = new Bridge(d1, d2)
 
   // this one runs before the add
   d2.listenSince(0, 'change', (page, delta) => {
@@ -153,7 +153,7 @@ test('bridge changes', t => {
     // this one runs after the add
     d2.listenSince(0, 'change', (page, delta) => {
       t.equal(page.name, 'Peter')
-      b.stop()
+      // b.stop()
       t.end()
     })
   })
@@ -164,13 +164,13 @@ test('bridge changes', t => {
 })
 
 test('chain of bridges', t => {
-  const d1 = new InMem({name: 'd1'})
-  const d2 = new InMem({name: 'd2'})
-  const d3 = new InMem({name: 'd3'})
-  const d4 = new InMem({name: 'd4'})
-  new Bridge(d1, d2)
-  new Bridge(d2, d3)
-  new Bridge(d3, d4)
+  const d1 = new dp.InMem({name: 'd1'})
+  const d2 = new dp.InMem({name: 'd2'})
+  const d3 = new dp.InMem({name: 'd3'})
+  const d4 = new dp.InMem({name: 'd4'})
+  d1.bridge(d2) // new Bridge(d1, d2) // eslint-disable-line no-new
+  d2.bridge(d3) // new Bridge(d2, d3) // eslint-disable-line no-new
+  d3.bridge(d4) // new Bridge(d3, d4) // eslint-disable-line no-new
   // new Bridge(d1, d3) // no cycles allowed!!
 
   // this one runs before the add
