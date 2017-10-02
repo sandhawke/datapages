@@ -107,7 +107,7 @@ class FlatFile extends BaseDB {
     mapping between locally-assigned and remotely-assigned (ie on
     disk) numbers.
   */
-  create () {
+  createBlank () {
     let id = this.nextSubjectID++
     this.debug('create() returning %d', id)
     return id
@@ -118,7 +118,7 @@ class FlatFile extends BaseDB {
 
     Used to be async from file, in version linked above...
   */
-  listenSince (seq, name, cb) {
+  OLDlistenSince (seq, name, cb) {
     if (name !== 'change') throw Error('only "change" events implemented in listenSince')
     this.debug('listenSince starts')
     for (const delta of this.deltas) {
@@ -128,6 +128,15 @@ class FlatFile extends BaseDB {
     this.emit('stable')  // replay-done?
     this.on('change', cb)
     this.debug('listenSince returning')
+  }
+
+  async replaySince (seq, name, cb) {
+    for (const delta of this.deltas) {
+      cb(delta.subject, delta)
+    }
+    // this isn't right -- someone else might be mid-replay
+    // this.emit('stable')
+    // Hopefully this promise resolving is the right signal
   }
 
   // which is better?

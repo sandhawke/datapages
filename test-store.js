@@ -11,7 +11,7 @@ const fs = require('fs')
 const path = require('path')
 const seedrandom = require('seedrandom')
 
-test('read', t => {
+test.skip('read', t => {
   const db = new FlatFile('/etc/passwd')
   db.listenSince(0, 'change', (pg, delta) => {
     debug('heard', delta)
@@ -59,24 +59,23 @@ test.only('using temporary files', tt => {
       db.setProperty(1, 'age', 40, null, null)
     })
 
-    tt.test('read deltas', t => {
+    tt.test('read deltas', async (t) => {
       const file = path.join(tmp, 'read-deltas')
       fs.writeFileSync(file, text3, 'utf8')
       const db = new FlatFile(file)
       const deltas = []
-      db.on('stable', () => {
-        debug('stable')
-        t.deepEqual(deltas, [
-          { seq: 1, subject: 1, property: 'age', value: 21 },
-          { seq: 2, subject: 2, property: 'age', value: 22 },
-          { seq: 3, subject: 1, property: 'age', value: 40 }
-        ])
-        t.end()
-      })
-      db.listenSince(0, 'change', (pg, delta) => {
+
+      await db.replaySince(0, 'change', (pg, delta) => {
         deltas.push(delta)
         debug('heard', delta)
       })
+
+      t.deepEqual(deltas, [
+        { seq: 1, subject: 1, property: 'age', value: 21 },
+        { seq: 2, subject: 2, property: 'age', value: 22 },
+        { seq: 3, subject: 1, property: 'age', value: 40 }
+      ])
+      t.end()
     })
 
     tt.test('hammer 1', hammer.bind(null, 1))
@@ -126,17 +125,11 @@ test.only('using temporary files', tt => {
       runner(-2)
       db.setProperty(db.create(), 'level', 1000, 0)
 
-      function check () {
+      async function check () {
         debug('now checking')
         const db = new FlatFile(file)
-        db.on('stable', () => {
-          debug('stable, done checking')
-          t.pass('deltas did increment in sequence')
-          t.comment('test dir was: ' + tmp)
-          t.end()
-        })
         let val = 1000
-        db.listenSince(0, 'change', (pg, delta) => {
+        await db.replaySince(0, 'change', (pg, delta) => {
           debug('checking: val %d delta %o', val, delta)
           if (delta.value !== val + delta.who) {
             t.comment('bad delta ' + JSON.stringify(delta))
@@ -144,6 +137,9 @@ test.only('using temporary files', tt => {
           }
           val = delta.value
         })
+        t.pass('deltas did increment in sequence')
+        t.comment('test dir was: ' + tmp)
+        t.end()
       }
     }
   })
