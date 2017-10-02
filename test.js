@@ -6,6 +6,14 @@ const fs = require('fs')
 const path = require('path')
 const transport = require('./fake-transport')
 
+const makers = [
+  MinDB,
+  InMem,
+  FlatFile,
+  ClientImmediateServer,
+  ClientNetworkServer
+]
+
 const tmp = fs.mkdtempSync('/tmp/datapages-test-')
 let count = 0
 const file = suffix => {
@@ -51,13 +59,9 @@ async function ClientNetworkServer () {
   return c
 }
 
-for (const maker of [
-  MinDB, InMem, FlatFile,
-  ClientImmediateServer,
-  ClientNetworkServer
-]) {
-  console.log('# for store type', maker.name)
+for (const maker of makers) {
   test('create-set-listen', async (t) => {
+    t.comment('for store type ' + maker.name)
     const db = await maker()
     const created = db.create()
     db.setProperty(created, 'color', 'green')
@@ -72,24 +76,70 @@ for (const maker of [
     })
   })
 
-  /*
-  test('', async (t) => {
+  test('create-props-listen', async (t) => {
+    t.comment('for store type ' + maker.name)
     const db = await maker()
-    const events = []
-    let created = db.create({color: 'red'})
+    const created = db.create({color: 'green'})
     db.listenSince(0, 'change', (pg, delta) => {
       t.equal(pg, created)
-      events.push(delta)
+      t.equal(delta.subject, created)
+      t.equal(delta.property, 'color')
+      t.equal(delta.value, 'green')
+      t.equal(delta.seq, 1)
+      db.close()
+      t.end()
     })
-    db.once('change', (pg, delta) => {
+  })
+
+  test('listen-create-set', async (t) => {
+    t.comment('for store type ' + maker.name)
+    const db = await maker()
+    let created
+    db.listenSince(0, 'change', (pg, delta) => {
+      t.equal(pg, created)
+      t.equal(delta.subject, created)
+      t.equal(delta.property, 'color')
+      t.equal(delta.value, 'green')
+      t.equal(delta.seq, 1)
+      db.close()
+      t.end()
     })
-
-                   // db.close()
-                   // t.end()
-
+    created = db.create()
     db.setProperty(created, 'color', 'green')
   })
-*/
+
+  test('weird timing on listenSince', async (t) => {
+    t.comment('for store type ' + maker.name)
+    const db = await maker()
+    const events = []
+    let created = db.create({color: 'red'})  // needs replay
+    db.listenSince(0, 'change', (pg, delta) => {
+      // console.log('# heard change %o', delta)
+      t.equal(pg, created)
+      // simplify comparing results by ignoring these
+      delete delta.subject
+      delete delta.who
+      delete delta.when
+      delete delta.oldValue
+      events.push(delta)
+
+      if (delta.value === 'blue') {
+        t.deepEqual(events, [
+          { property: 'color', value: 'red', seq: 1 },
+          { property: 'color', value: 'green', seq: 2 },
+          { property: 'color', value: 'yellow', seq: 3 },
+          { property: 'color', value: 'blue', seq: 4 }
+        ])
+        db.close()
+        t.end()
+      }
+    })
+    db.once('delta', delta => {
+      db.setProperty(created, 'color', 'yellow') // during on-change callback
+      db.setProperty(created, 'color', 'blue')   // during on-change callback
+    })
+    db.setProperty(created, 'color', 'green') // normal change-watch
+  })
 }
 
 /*

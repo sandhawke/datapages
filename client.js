@@ -34,7 +34,7 @@ class Client extends BaseDB {
     this.transport.close()
   }
 
-  create () {
+  createBlank () {
     const id = this.nextLocalID--
     this.debug('create returning', id)
     return id

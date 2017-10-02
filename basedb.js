@@ -32,6 +32,7 @@ class DB extends EventEmitter {
     // just wants to be handled the delta.subject, so ... give it that
     // with on('change')
     this.on('delta', delta => {
+      this.debug('delta => change %o', delta)
       this.emit('change', delta.subject, delta)
     })
   }
