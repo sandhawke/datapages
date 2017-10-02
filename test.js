@@ -72,21 +72,24 @@ for (const maker of [
     })
   })
 
-  test('listen-create-set', async (t) => {
+  /*
+  test('', async (t) => {
     const db = await maker()
-    let created
+    const events = []
+    let created = db.create({color: 'red'})
     db.listenSince(0, 'change', (pg, delta) => {
       t.equal(pg, created)
-      t.equal(delta.subject, created)
-      t.equal(delta.property, 'color')
-      t.equal(delta.value, 'green')
-      t.equal(delta.seq, 1)
-      db.close()
-      t.end()
+      events.push(delta)
     })
-    created = db.create()
+    db.once('change', (pg, delta) => {
+    })
+
+                   // db.close()
+                   // t.end()
+
     db.setProperty(created, 'color', 'green')
   })
+*/
 }
 
 /*

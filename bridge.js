@@ -131,7 +131,7 @@ class Bridge {
 }
 */
 
-module.exports.Bridge = Bridge
+module.exports = Bridge
 
 // DIFFERENT OBJECT in JS?
 

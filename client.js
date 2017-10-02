@@ -26,7 +26,7 @@ class Client extends BaseDB {
     this.transport.on('delta', delta => {
       this.debug('heard delta %o', delta)
       // delta.value = this.refs.to(delta.value)
-      this.emit('change', delta.subject, delta)
+      this.emit('delta', delta)
     })
   }
 

@@ -22,18 +22,22 @@ class MinDB extends BaseDB {
 
   close () { }
 
-  create () {
+  createBlank () {
     let id = this.nextSubjectID++
     this.debug('create() returning %d', id)
     return id
   }
 
+  async replaySince (seq, name, fn) {
+    for (const delta of this.deltas) {
+      fn(delta.subject, delta)
+    }
+  }
+
+  /*
   listenSince (seq, name, cb) {
     if (name !== 'change') throw Error('only "change" events implemented in listenSince')
     this.debug('listenSince starts')
-    for (const delta of this.deltas) {
-      cb(delta.subject, delta)
-    }
     this.debug('replay done')
     this.emit('stable')  // replay-done?
     this.on('change', cb)
@@ -44,11 +48,12 @@ class MinDB extends BaseDB {
     const delta = {subject, property, value, who, when}
     this.applyDelta(delta)
   }
+  */
 
   applyDelta (delta) {
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
     this.deltas.add(delta)
-    this.emit('change', delta.subject, delta)
+    this.emit('delta', delta)
   }
 }
 

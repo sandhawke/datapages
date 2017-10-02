@@ -161,7 +161,7 @@ class InMem extends BaseDB {
     const delta = { subject: proxy, property: name, oldValue, value, seq }
     this.deltas.push(delta)
     this.debug('emiting %d delta %o', seq, delta)
-    this.emit('change', proxy, delta)
+    this.emit('delta', delta)
     this.debug('emit done %d', seq)
   }
 
