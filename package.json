@@ -4,7 +4,7 @@
   "description": "very simple synchronizing document-style database",
   "main": "index.js",
   "scripts": {
-    "test": "standard && tap --cov test*.js",
+    "test": "standard && tap --cov test*.js test/test*.js",
     "coverage": "standard && tap --cov test*.js --coverage-report=lcov",
     "watch": "watchify client.js -o static/bundle.js -v",
     "release": "npm version patch && git push --follow-tags && npm publish"

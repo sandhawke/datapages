@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const dp = require('.')
+const dp = require('..')
 const util = require('util')
 // const debug = require('debug')('datapages_test')
 

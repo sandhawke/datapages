@@ -1,5 +1,5 @@
 const { run } = require('webgram/browser-tester')
-const datapages = require('.')
+const datapages = require('..')
 const fs = require('fs')
 const path = require('path')
 
@@ -9,7 +9,7 @@ browsers.push('firefox')
 browsers.push('chromium')
 // const browsers = null
 
-run('run-this-in-browsers', {newServer, browsers})
+run('test/run-this-in-browsers', {newServer, browsers})
 
 let count = 0
 

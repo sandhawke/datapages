@@ -6,7 +6,7 @@
 // Instead, let "test-in-browser.js" run this via browserify
 
 const test = require('tape')
-const datapages = require('.')
+const datapages = require('..')
 const runTests = require('./basic-tests')
 // const debug = require('debug')('datapages_inbrowser')
 

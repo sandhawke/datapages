@@ -5,7 +5,7 @@
 const test = require('tape')
 // const InMem = require('./inmem').InMem
 // const Bridge = require('./bridge').Bridge
-const FlatFile = require('./flatfile')
+const FlatFile = require('../flatfile')
 const debug = require('debug')('datapages_test_store')
 const fs = require('fs')
 const path = require('path')

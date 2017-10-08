@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const refs = require('./refs')
+const refs = require('../refs')
 
 test('refs', t => {
   let id = 0

@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const IDMapper = require('./idmapper')
+const IDMapper = require('../idmapper')
 
 test(t => {
   const mapper = new IDMapper()

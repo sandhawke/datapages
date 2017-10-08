@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const datapages = require('.')
+const datapages = require('..')
 const fs = require('fs')
 const path = require('path')
 const transport = require('./fake-transport')
