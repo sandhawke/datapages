@@ -75,22 +75,28 @@ class DB extends EventEmitter {
   async listenSince (seq, ev, fn) {
     if (ev !== 'change') throw Error('can only listenSince for "change" events')
     let buf = []
+    this.debug('adding change listener')
     this.on('change', (pg, delta) => {
       if (buf) {
         buf.push(delta)
       } else {
+        this.debug('calling listenSince listener without buffering')
         fn(pg, delta)
       }
     })
 
+    this.debug('listenSince STARTING REPLAY')
     await this.replaySince(seq, ev, fn)
+    this.debug('listenSince resuming after replaySince')
 
     // loop as long as we need to, since fn might trigger more events
     while (buf.length) {
       const delta = buf.shift()
+      this.debug('calling listenSince with buffered event')
       fn(delta.subject, delta)
     }
     buf = false // flag to stop buffering
+    this.emit('stable')
   }
 }
 

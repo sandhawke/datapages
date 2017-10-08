@@ -6,6 +6,9 @@ const Filter = require('./filter').Filter
 
 // base might be a DB() or another "upstream" View.  We're always more
 // restrictive than the base, narrowing which pages appear.
+//
+// base must make available the current state of its members, it can't just
+// passthrough deltas.    but they don't need to be enumerable...
 
 class View extends EventEmitter {
   constructor (options = {}, base) {
@@ -20,11 +23,6 @@ class View extends EventEmitter {
     this.members = new Set()
 
     this.base.on('stable', () => { this.emit('stable') })
-
-    // ONSINCE vs ON
-    this.base.onSince(0, 'appear', page => {
-      this.consider(page)
-    })
 
     this.base.on('disappear', page => {
       this.members.delete(page)
@@ -41,14 +39,22 @@ class View extends EventEmitter {
     })
 
     // let this wait, so folks have time to add on-appear handler
-    process.nextTick(() => {
-      let some = false
-      for (let page of this.base.items()) {
-        some = true
-        this.consider(page)
-      }
-      if (some) this.emit('stable')
+    //
+    // maybe some race conditions here.   :-(
+    //
+    /*
+    process.nextTick(async () => {
+      const endSeq = await this.base.maxSeq()
+      this.base.replaySince(0, 'change', (pg, delta) => {
+        this.consider(pg)
+        if (delta.seq >= endSeq) this.emit('stable')
+      })
     })
+    */
+  }
+
+  async maxSeq () {
+    return this.base.maxSeqUsed
   }
 
   consider (page) {
@@ -77,10 +83,7 @@ class View extends EventEmitter {
   }
 
   passes (page) {
-    // if (this.filterObject) {
     return this.filterObject.passes(page)
-    // }
-    // return true
   }
 
   check (page) {
@@ -113,19 +116,23 @@ class View extends EventEmitter {
     this.base.overlay(page, overlay)
   }
 
-  filter (f) {
-    return new View({filter: f}, this)
-  }
-
   view (arg) {
     console.warn('subviews do not currently participate in the schema')
     // name them like 'root.sub.subsub' ?
     return new View(arg, this)
   }
 
-  onSince (...a) {
-    // REALLY need to filter
-    return this.base.onSince(...a)
+  listenSince (seq, ev, fn) {
+    switch (ev) {
+      case 'change':
+        return this.base.listenSince(seq, ev, (pg, delta) => {
+          if (this.passes(pg)) fn(pg, delta)
+        })
+      case 'appear':
+      case 'disappear':
+      default:
+        throw Error(`unknown listenSince event "${ev}"`)
+    }
   }
 }
 

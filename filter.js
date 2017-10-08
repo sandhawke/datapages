@@ -26,16 +26,18 @@ class Filter {
       throw Error('user-defined functions not supported')
     }
 
-    this.clausify(arg || {})
+    this.clausify(arg)
     // compile?  it'd be pretty easy, but a little harder to debug
   }
 
   clausify (template) {
     this.debug('clausify %o', template)
-    this.debug('this === template?', this === template)
-    this.debug('CLAUSIFY?! %j', template)
-    this.debug('CLAUSIFY... .clauses:', template.clauses)
-    if (template.debug || template.clauses || template instanceof Filter) throw Error('WTF trap')
+    // this.debug('this === template?', this === template)
+    // this.debug('CLAUSIFY?! %j', template)
+    // this.debug('CLAUSIFY... .clauses:', template.clauses)
+    // if (template.debug || template.clauses || template instanceof Filter) throw Error('WTF trap')
+
+    if (!template) throw Error('filter must be defined, but can be {}')
 
     for (let prop of Object.keys(template)) {
       const spec = template[prop]
@@ -66,6 +68,7 @@ class Filter {
 
   passes (page) {
     this.debug('does this filter pass %o?', page)
+    // this.debug(' does this filter pass %o?', page)
     for (let clause of this.clauses) {
       if (!this.passesClause(page, clause)) {
         this.debug('... no, failing %o', clause)

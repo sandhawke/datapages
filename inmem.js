@@ -36,11 +36,32 @@ class InMem extends BaseDB {
     this.debug('constructed')
   }
 
+  async maxSeq () {
+    return this.maxSeqUsed
+  }
+
   inspect () {
     return `InMem(${this.name})`
   }
 
-  listenSince (seq, event, func) {
+  // this doesn't need to be async, but it is because for some other
+  // implementations it might be reading off disk or network.
+  async replaySince (seq, ev, fn) {
+    if (ev === 'change') {
+      this.debug('replaySince begins')
+      for (const delta of this.deltas) {
+        if (delta.seq > seq) {
+          fn(delta.subject, delta)
+        }
+      }
+      this.debug('replaySince ends')
+    } else {
+      throw Error('unknown replay event type: ' + ev)
+    }
+  }
+
+  /*
+  async listenSince (seq, event, func) {
     this.debug('new listener')
     if (event === 'change') {
       for (const delta of this.deltas) {
@@ -54,6 +75,7 @@ class InMem extends BaseDB {
       this.on('change', func)
     }
   }
+  */
 
   /*
     Create a new proxy, setting its values according to the
@@ -106,7 +128,7 @@ class InMem extends BaseDB {
     // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
 
     if (name === util.inspect.custom || name === 'inspect') {
-      return () => 'Proxy_' + this.name + '_' + target.__rawseq
+      return () => 'Proxy_' + this.name + '_' + target.__rawseq + JSON.stringify(target)
     }
     if (name === '__target') {
       return target

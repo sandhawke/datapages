@@ -2,8 +2,10 @@
 
 const test = require('tape')
 const dp = require('..')
-const util = require('util')
-// const debug = require('debug')('datapages_test')
+// const util = require('util')
+const debug = require('debug')('datapages_test_db')
+
+/*  nah, give ourselves flexibility to mess with these
 
 test('debugging labels', t => {
   const d1 = new dp.InMem({name: 'd1'})
@@ -16,6 +18,7 @@ test('debugging labels', t => {
 
   t.end()
 })
+*/
 
 test('query before add', t => {
   const d1 = new dp.InMem()
@@ -57,40 +60,55 @@ function clean (obj) {
   return result
 }
 
-test('add property', t => {
+test('add property', async (t) => {
   const d1 = new dp.InMem()
 
   const events = []
-  d1.listenSince(0, 'change', (pg, delta) => {
+
+  // the "await" here is important, we'll be in replay mode
+  // as we process, and the first checks will fail.  The second
+  // ones would succeed, except the state of the page would be out
+  // of sync.
+  await d1.listenSince(0, 'change', (pg, delta) => {
+    debug('seeing change %o', delta)
     events.push(clean(delta))
   })
+  t.comment('listenSince returned')
   const pg = d1.create({name: 'Peter'})
   pg.age = 151
   pg.age = 152
   pg.age = undefined
-  t.deepEqual(events, [
-    { subject: { name: 'Peter' },
-      property: 'name',
-      oldValue: undefined,
-      value: 'Peter',
-      seq: 1 },
-    { subject: { name: 'Peter', age: 151 },
-      property: 'age',
-      oldValue: undefined,
-      value: 151,
-      seq: 2 },
-    { subject: { name: 'Peter', age: 152 },
-      property: 'age',
-      oldValue: 151,
-      value: 152,
-      seq: 3 },
-    { subject: { name: 'Peter' },
-      property: 'age',
-      oldValue: 152,
-      value: undefined,
-      seq: 4 } ]
+  const check = () => {
+    t.comment('checking values')
+    t.deepEqual(events, [
+      { subject: { name: 'Peter' },
+        property: 'name',
+        oldValue: undefined,
+        value: 'Peter',
+        seq: 1 },
+      { subject: { name: 'Peter', age: 151 },
+        property: 'age',
+        oldValue: undefined,
+        value: 151,
+        seq: 2 },
+      { subject: { name: 'Peter', age: 152 },
+        property: 'age',
+        oldValue: 151,
+        value: 152,
+        seq: 3 },
+      { subject: { name: 'Peter' },
+        property: 'age',
+        oldValue: 152,
+        value: undefined,
+        seq: 4 } ]
              )
-  t.end()
+  }
+  check()
+  // let some async stuff complete
+  setTimeout(() => {
+    check()
+    t.end()
+  }, 1)
 })
 
 test('on-change for object', t => {
