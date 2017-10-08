@@ -40,7 +40,7 @@ async function ClientImmediateServer () {
   const f = new transport.Server()
   const s = new datapages.Server({transport: f, db: new datapages.MinDB()})
   s.transport.start()
-  const c = new datapages.Client({transport: f.connectedClient()})
+  const c = new datapages.RawClient({transport: f.connectedClient()})
   return c
 }
 
@@ -51,7 +51,7 @@ async function ClientNetworkServer () {
     },
     db: new datapages.MinDB()})
   await s.transport.start()
-  const c = new datapages.Client({serverAddress: s.transport.address})
+  const c = new datapages.RawClient({serverAddress: s.transport.address})
   const close = c.close.bind(c)
   c.close = () => {
     close()

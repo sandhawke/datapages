@@ -2,10 +2,10 @@
 
 const test = require('tape')
 // const Bridge = require('./bridge').Bridge
-// const InMem = require('./inmem').InMem
+const datapages = require('..')
 // const path = require('path')
 // const util = require('util')
-const Client = require('../client')
+// const Client = require('../client')
 const MinDB = require('../mindb')
 const Server = require('../server')
 const debug = require('debug')('datapages_test_client_server')
@@ -18,8 +18,8 @@ function forEachTransport (t, run) {
   t.test('with fake transport', t => {
     const f = new transport.Server()
     const s = new Server({transport: f, db: new MinDB()})
-    const c = new Client({transport: f.connectedClient()})
-    const c2 = new Client({transport: f.connectedClient()})
+    const c = new datapages.RawClient({transport: f.connectedClient()})
+    const c2 = new datapages.RawClient({transport: f.connectedClient()})
     run(t, s, c, c2)
   })
 
@@ -32,8 +32,9 @@ function forEachTransport (t, run) {
           serverSecretsDBName: tmp,  // deep in webgram-sessions
           db: new MinDB()})
         await s.transport.start()
-        const c = new Client({serverAddress: s.transport.address})
-        run(t, s, c)
+        const c = new datapages.RawClient({serverAddress: s.transport.address})
+        const c2 = new datapages.RawClient({serverAddress: s.transport.address})
+        run(t, s, c, c2)
       })
     })
   }
@@ -105,11 +106,21 @@ test('delta inbound before', tt => {
   })
 })
 
-/*
-test.only('transport', tt => {
-  forEachTransport(tt, (t, s, c) => {
-    c.transport.send('hello', 10, 20, 30)
-    t.end()
+test('bridge', tt => {
+  forEachTransport(tt, (t, s, c, c2) => {
+    const db = new datapages.InMem()
+    db.bridge(c)
+    const obj = c2.create()
+    debug('id %j', obj)
+    c2.applyDelta({subject: obj, property: 'color', value: 'red'})
+    db.listenSince(0, 'change', (pg, delta) => {
+      t.equal(delta.property, 'color')
+      t.equal(delta.value, 'red')
+      db.close()
+      c.close()
+      s.close()
+      t.pass()
+      t.end()
+    })
   })
 })
-*/

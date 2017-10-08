@@ -1,0 +1,5 @@
+seq,subject,property,value,who,when
+1,1,runningAt,"""http://magrathea:6300/""",1,2017-10-08T18:01:22.431Z
+2,-1,started,"""2017-10-08T18:01:22.326Z""",1,2017-10-08T18:01:22.433Z
+3,-1,runningAt,"""http://magrathea:6300/""",1,2017-10-08T18:01:56.071Z
+4,-1,started,"""2017-10-08T18:01:56.033Z""",1,2017-10-08T18:01:56.072Z

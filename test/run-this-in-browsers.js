@@ -28,7 +28,7 @@ async function InMem () {
 
 async function ClientToReadyServer () {
   console.log('# CTRS running', window.serverAddress)
-  return new datapages.Client(window.serverAddress, {useSessions: false})
+  return new datapages.RawClient(window.serverAddress, {useSessions: false})
 }
 
 for (const maker of makers) runTests(test, maker)

@@ -2,9 +2,17 @@
 
 const Server = require('./server')
 
-const Client = require('./client')
+const RawClient = require('./client')
 const InMem = require('./inmem')
 const FlatFile = require('./flatfile')
 const MinDB = require('./mindb')
 
-module.exports = { InMem, FlatFile, MinDB, Client, Server }
+class Remote extends InMem {
+  constructor (options) {
+    super()
+    const client = new RawClient(options)
+    this.bridge(client)
+  }
+}
+
+module.exports = { InMem, FlatFile, MinDB, RawClient, Server, Remote }
