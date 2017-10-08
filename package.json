@@ -28,11 +28,13 @@
     "mutexify": "^1.2.0"
   },
   "devDependencies": {
+    "browserify": "^14.4.0",
     "fs-extra": "^4.0.2",
     "seedrandom": "^2.4.3",
     "supports-color": "^4.4.0",
     "tap": "^10.7.2",
     "tape": "^4.8.0",
+    "tape-run": "^3.0.0",
     "watchify": "^3.9.0"
   }
 }

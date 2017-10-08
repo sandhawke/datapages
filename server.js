@@ -8,7 +8,7 @@ const IDMapper = require('./idmapper')
 let instanceCounter = 0
 
 class Server {
-  constructor (options) {
+  constructor (options = {}) {
     Object.assign(this, options)
 
     if (!this.debugName) this.debugName = ++instanceCounter
