@@ -21,6 +21,7 @@ class Filter {
     this.clauses = []
 
     if (typeof arg === 'function') {
+      this.debug('arg was function? %o', arg)
       // because I want to be able to send them across the network!
       throw Error('user-defined functions not supported')
     }
@@ -105,6 +106,9 @@ class Filter {
       case 'in':
         if (Array.isArray(value)) {
           return value.includes(left)
+        }
+        if (value instanceof Set) {
+          return value.has(left)
         }
         throw Error('"in" needs the comparison value to be an array')
       case 'includes':
