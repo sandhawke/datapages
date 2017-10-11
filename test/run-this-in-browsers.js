@@ -28,7 +28,8 @@ window.localStorage.debug = '*'
 const makers = [
   MinDB,
   InMem,
-  ClientToReadyServer
+  ClientToReadyServer,  // has a bug in 'created' ref in basic-tests
+  RemoteToReadyServer
 ]
 
 async function MinDB () {
@@ -42,6 +43,11 @@ async function InMem () {
 async function ClientToReadyServer () {
   console.log('# CTRS running', window.serverAddress)
   return new datapages.RawClient(window.serverAddress, {useSessions: false})
+}
+
+async function RemoteToReadyServer () {
+  console.log('# RTRS running', window.serverAddress)
+  return new datapages.Remote(window.serverAddress, {useSessions: false})
 }
 
 for (const maker of makers) runTests(test, maker)
