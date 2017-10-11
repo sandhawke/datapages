@@ -25,6 +25,9 @@ async function start () {
     launch(server.siteURL, 'firefox', (err, instance) => {
       if (err) throw err
     })
+    launch(server.siteURL, 'chrome', (err, instance) => {
+      if (err) throw err
+    })
   })
 
   function app (req, res) {
@@ -40,10 +43,10 @@ window.serverAddress='${server.address}'
 console.log('# running datapages demo, server=', window.serverAddress
 )
 </script>
-<script type="text/javascript" src="/bundle.js"></script>
 </head>
 <body>
 <p>loading demo app from ${__dirname}</p>
+<script type="text/javascript" src="/bundle.js"></script>
 </body>`)
   }
 
