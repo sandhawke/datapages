@@ -3,7 +3,7 @@
 const debugM = require('debug')
 const webgram = require('webgram')
 const FlatFile = require('./flatfile')
-const IDMapper = require('./idmapper')
+// const IDMapper = require('./idmapper')
 
 let instanceCounter = 0
 
@@ -24,7 +24,7 @@ class Server {
     }
     // relies on db already having figure out nextObjectID which
     // would have been nice to be async
-    this.idmapper = new IDMapper(this.db.nextObjectID)
+    // this.idmapper = new IDMapper(this.db.nextObjectID)
 
     this.transport.on('hello', (conn, a, b, c) => {
       this.debug('HELLO %o %o %o', a, b, c)

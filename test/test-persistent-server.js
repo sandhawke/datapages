@@ -28,7 +28,7 @@ const path = require('path')
 const transport = require('./fake-transport')
 const mockDate = require('mockdate')
 
-mockDate.set('2/1/1988',120);
+mockDate.set('2/1/1988', 120)
 debug('date mocked to', new Date())
 
 const tmp = fs.mkdtempSync('/tmp/datapages-test-')
@@ -67,8 +67,11 @@ test(tt => {
     await c.listenSince(0, 'change', buffer)
     c.off('change', buffer)
     t.deepEqual(buff, [
-      [ 1, { seq: 1, subject: 1, property: 'color', value: 'red',
-             when: new Date('2017-10-09T14:26:07.783Z')} ]
+      [ 1, { seq: 1,
+        subject: 1,
+        property: 'color',
+        value: 'red',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
     ])
     t.end()
   })
@@ -94,13 +97,16 @@ test(tt => {
     await r.listenSince(0, 'change', buffer)
     const subj = buff[0][0]
     t.deepEqual(buff, [
-      [ subj, { seq: 1, subject: subj, property: 'color', value: 'red',
-             when: new Date('2017-10-09T14:26:07.783Z')} ]
+      [ subj, { seq: 1,
+        subject: subj,
+        property: 'color',
+        value: 'red',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
     ])
     t.equal(subj.color, 'red')
     t.end()
   })
-  
+
   tt.test('change via proxy', async (t) => {
     const pup = r.create()
     debug('.')

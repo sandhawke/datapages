@@ -22,20 +22,23 @@ const transport = require('./fake-transport')
 
 const doWebgram = false
 
-function forEachTransport (t, run) {
+function forEachTransport (t, run, makeDB) {
   const tmp = fs.mkdtempSync('/tmp/datapages-test-')
   t.comment(' ... forEachTransport, in tmp ' + tmp)
 
-  /*
-  t.test('. with fake transport to MinDB', tt => {
+  if (!makeDB) {
+    makeDB = () => new MinDB()
+  }
+
+  t.test('. with fake (local) transport', tt => {
     const f = new transport.Server()
-    const s = new Server({transport: f, db: new MinDB()})
+    const s = new Server({transport: f, db: makeDB(tmp)})
     const c = new datapages.RawClient({transport: f.connectedClient()})
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
     run(tt, s, c, c2)
   })
-  */
 
+  /*
   t.test('. with fake transport to FlatFile', tt => {
     const f = new transport.Server()
     tt.datafile = path.join(tmp, 'data.csv')
@@ -50,14 +53,15 @@ function forEachTransport (t, run) {
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
     run(tt, s, c, c2)
   })
+*/
 
   if (doWebgram) {
     t.test(' . with webgram', async (tt) => {
       const secrets = path.join(tmp, 'server-secrets')
-      console.log('XXX', secrets)
+      // console.log('XXX', secrets)
       const s = new Server({
         sessionOptions: { serverSecretsDBName: secrets },
-        db: new MinDB()})
+        db: makeDB(tmp)})
       await s.transport.start()
       const c = new datapages.RawClient({serverAddress: s.transport.address})
       const c2 = new datapages.RawClient({serverAddress: s.transport.address})
@@ -66,17 +70,17 @@ function forEachTransport (t, run) {
   }
 }
 
-test.only('delta outbound after', tt => {
+test('delta outbound after', tt => {
   forEachTransport(tt, (t, s, c) => {
     c.listenSince(0, 'change', (pg, delta) => {
-      console.log(95000, pg, delta)
+      // console.log(95000, pg, delta)
       t.equal(delta.property, 'color')
       t.equal(delta.value, 'red')
       c.close()
       s.close()
       t.pass()
       t.end()
-      process.exit()
+      // process.exit()
     })
     const obj = s.db.create()
     debug('id %j', obj)
@@ -173,3 +177,66 @@ test('chain', t => {
   }
 })
 */
+
+const makeSampleDB = (tmp) => {
+  const datafile = path.join(tmp, 'data.csv')
+  fs.writeFileSync(datafile, `seq,subject,property,value,who,when
+1,1,color,"""red""",,2017-10-09T14:26:07.783Z
+`, 'utf8')
+  return new datapages.FlatFile(datafile)
+}
+
+const getEvents = async (db) => {
+  const buff = []
+  const buffer = (pg, delta) => {
+    debug('buffer() called, %o', delta)
+    const d = Object.assign({}, delta)
+    delete d.oldValue
+    // d.when = d.when.toISOString()
+    buff.push([pg, d])
+  }
+
+  await db.listenSince(0, 'change', buffer)
+
+  // listenSince over the network doesn't handle this right?!
+  await sleep(100)
+
+  db.off('change', buffer)
+  return buff
+}
+
+test('1 delta', tt => {
+  const f = async (t, s, c, c2) => {
+    const buff = await getEvents(c)
+    t.deepEqual(buff, [
+      [ 1, { seq: 1,
+        subject: 1,
+        property: 'color',
+        value: 'red',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
+    ])
+    t.end()
+  }
+  forEachTransport(tt, f, makeSampleDB)
+})
+
+test('1 delta again', tt => {
+  const f = async (t, s, c, c2) => {
+    const buff = await getEvents(c)
+    t.deepEqual(buff, [
+      [ 1, { seq: 1,
+        subject: 1,
+        property: 'color',
+        value: 'red',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
+    ])
+    t.end()
+  }
+  forEachTransport(tt, f, makeSampleDB)
+})
+
+function sleep (ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}

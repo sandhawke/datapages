@@ -2,9 +2,11 @@
 
 const debug = require('debug')('datapages_refs')
 /*
-  Given a structured value (objects, arrays), convert to a from
-  versions that have no nested objects, and instead use { ref: ID }
+  Given a structured value (objects, arrays), convert to a
+  version that have no nested objects, and instead use { ref: ID }
   where there was nesting.
+
+  needs to be told the db.create and db.overlay functions
 */
 
 function refs (create, overlay) {
