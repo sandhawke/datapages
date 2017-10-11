@@ -18,6 +18,7 @@ class Bridge {
     // map.get(src).get(sink).get(srcObj) == sinkObj
     // map.get(sink).get(src).get(sinkObj) = srcObj
 
+    const bridgeTag = Symbol('bridgeTag')
     const newMap = () => new Map()
     for (const src of dbs) {
       for (const sink of dbs) {
@@ -32,16 +33,22 @@ class Bridge {
         // feed changes from src to sink
         debug('making new listeniner src=%s sink=%s', src.name, sink.name)
         const listener = (pg, delta) => {
-          debug('Change %s -> %s', src.name, sink.name)
+          debug('handling delta %s -> %s', src.name, sink.name)
           debug(' delta %o', delta)
           debug('  forward %o', forward)
           debug('  rev     %o', rev)
+          if (delta[bridgeTag]) {
+            debug('already seen by me, ignoring')
+            return
+          }
+          delta[bridgeTag] = true
           let sinkHandle = forward.get(pg)
           if (sinkHandle === undefined) {
             debug('no sinkHandle yet, need to create')
             sinkHandle = sink.create()
             forward.set(pg, sinkHandle)
             rev.set(sinkHandle, pg)
+            debug('saved sinkHandle in forward/rev %o', sinkHandle)
           } else {
             debug('sinkHandle already exists; reusing %o', sinkHandle)
           }
@@ -49,8 +56,15 @@ class Bridge {
           // turn around and head UPSTREAM.  Or something like that.  This
           // will be a problem if there's a delay, as it'll change values
           // back, and then loop.
+          //
+          // or have delta ids, and you've already seen it?
+          //
+          // or maybe some kind of hop counter?
+          //
           debug('setProperty %o %O', sinkHandle, delta)
-          sink.setProperty(sinkHandle, delta.property, delta.value)
+          const dd = Object.assign({}, delta)
+          dd.subject = sinkHandle
+          sink.applyDelta(dd)
         }
         src.listenSince(0, 'change', listener)
         this.listens.push([src, listener])

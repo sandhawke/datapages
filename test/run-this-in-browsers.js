@@ -1,5 +1,18 @@
 'use strict'
 
+/*
+
+  factor out common stuff from test-basics
+
+  using some flags on the makers
+    .needsFilesystem
+    .needsServer
+
+  and ClientToReadyServer is a .needsServer
+  and should also do  transport.ask.resetState()
+
+*/
+
 // NOT meant to be run directly, which is why the name doesn't start with
 // test-
 //

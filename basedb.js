@@ -48,7 +48,10 @@ class DB extends EventEmitter {
   }
 
   setProperty (subject, property, value, who, when) {
-    const delta = {subject, property, value, who, when}
+    const delta = {subject, property, value}
+    // we don't want { who: undefined } cluttering up our test cases, etc
+    if (who !== undefined) delta.who = who
+    if (when !== undefined) delta.when = when
     this.applyDelta(delta)
   }
 

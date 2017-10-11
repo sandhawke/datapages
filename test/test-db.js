@@ -55,6 +55,7 @@ function clean (obj) {
   const result = {}
   for (const key of Object.keys(obj)) {
     if (key.startsWith('__')) continue
+    if (key === 'who') continue           // DANGER
     result[key] = clean(obj[key])
   }
   return result

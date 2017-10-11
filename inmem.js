@@ -161,30 +161,38 @@ class InMem extends BaseDB {
     return true
   }
 
-  setProperty (proxy, name, value) {
-    this.debug('setProperty %o %j=%j', proxy, name, value)
-    const target = proxy.__target
+  applyDelta (delta) {
+    // setProperty (proxy, name, value) {
+    const {subject, property, value} = delta
+    this.debug('applyDelta %o', delta)
+    const target = subject.__target
     this.debug('  target is %o', target)
 
     // WISH LIST: check that the value is allowed by all our async Validators
 
-    const oldValue = target[name]
+    // if (delta.oldvalue)  do something about it?
+
+    const oldValue = target[property]
     if (oldValue === value) {
       this.debug('change to same value?')
       return
     }
+    delta.oldValue = oldValue
+
     if (value === undefined) {
-      delete target[name]   // we don't deal with inheritence, so this is simpler
+      delete target[property]   // we don't deal with inheritence, so this is simpler
     } else {
-      target[name] = value
+      target[property] = value
     }
-    const seq = ++this.maxSeqUsed
-    // BUG: if this subject: proxy we get a loop
-    const delta = { subject: proxy, property: name, oldValue, value, seq }
+
+    if (delta.seq === undefined) {
+      delta.seq = ++this.maxSeqUsed
+    }
+
     this.deltas.push(delta)
-    this.debug('emiting %d delta %o', seq, delta)
+    this.debug('emiting %d delta %o', delta.seq, delta)
     this.emit('delta', delta)
-    this.debug('emit done %d', seq)
+    this.debug('emit done %d', delta.seq)
   }
 
   /// /////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 'use strict'
 
-const dp = require('datapages')
+const datapages = require('datapages')
 const browserify = require('browserify')
 const launcher = require('james-browser-launcher')
 const path = require('path')
@@ -8,8 +8,13 @@ const path = require('path')
 async function start () {
   const appjs = browserify(path.join(__dirname, 'app'))
 
-  const dpserver = new dp.Server({port: process.env.PORT})
-  const server = dpserver.transport
+  const dps = new datapages.Server({port: process.env.PORT})
+
+  dps.db.on('change', (page, delta) => {
+    console.log('page changed %o', delta)
+  })
+
+  const server = dps.transport
   server.app.get('/', app)
   server.app.get('/bundle.js', js)
 
