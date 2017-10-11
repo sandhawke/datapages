@@ -11,7 +11,7 @@ document.body.innerHTML = `<div>
 
 <p>Say: <input type="text" id="compose"></p>
 
-Messages:<div id="messages"></div>
+Messages:<div id="messages">.</div>
 </div>`
 
 const me = db.create({
@@ -54,7 +54,7 @@ v.listenSince(0, 'change', (page, delta) => {
     users.appendChild(page.__e)
     usersById.set(delta.who, page)
   }
-  let text = 'user: ' + (page.name ? page.name : '<em>anon</em>')
+  let text = 'user: ' + (page.name ? page.name : '<em>anon</em>') + delta.who
   if (page === me) {
     text += ' (you)'
   }
@@ -66,7 +66,7 @@ db.view({filter: {isMessage: true}})
     console.log('x')
     if (!page.__e) {
       page.__e = document.createElement('p')
-      messages.appendChild(page.__e)
+      messages.insertBefore(page.__e, messages.firstChild)
     }
     let text = 'msg: ' + page.text + ' ( ' + usersById.get(delta.who).name + ' - ' + delta.when + ' )'
     page.__e.innerHTML = text
