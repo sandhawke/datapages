@@ -4,6 +4,7 @@ const datapages = require('datapages')
 const browserify = require('browserify')
 const launcher = require('james-browser-launcher')
 const path = require('path')
+const glob = require('glob')
 
 async function start () {
   const dps = new datapages.Server({db: new datapages.MinDB(),
@@ -31,6 +32,10 @@ async function start () {
   })
 
   function root (req, res) {
+    glob("*/app.js", function (err, files) {
+      if (err) throw err
+      console.log(files)
+      const apps = files.map(x => x.replace(/\/app.js/, ''))
     res.send(
       `<!doctype html>
 <html lang="en">
@@ -40,8 +45,12 @@ async function start () {
 <title>Datapages Demo</title>
 </head>
 <body>
-<p><a href="drag-in-sync/">drag-in-sync</a></p>
+<p>Select a demo:</p>
+<ol>
+${apps.map(x => `<li><a href="${x}/">${x}</li>`).join('')}
+<ol>
 </body>`)
+    })
   }
   
   function app (req, res) {
