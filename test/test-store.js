@@ -11,17 +11,7 @@ const fs = require('fs')
 const path = require('path')
 const seedrandom = require('seedrandom')
 
-test.skip('read', t => {
-  const db = new FlatFile('/etc/passwd')
-  db.listenSince(0, 'change', (pg, delta) => {
-    debug('heard', delta)
-  })
-  db.on('stable', () => {
-    t.end()
-  })
-})
-
-test.only('using temporary files', tt => {
+test('using temporary files', tt => {
   fs.mkdtemp('/tmp/datapages-test-', (err, tmp) => {
     if (err) throw err
     tt.comment('running file tests in: ' + tmp)
@@ -33,6 +23,7 @@ test.only('using temporary files', tt => {
         t.equal(delta.value, 20)
         const written = fs.readFileSync(file, 'utf8')
         t.equal(written, 'seq,subject,property,value,who,when\n1,1,age,20,,\n')
+        db.close()
         t.end()
       })
       db.setProperty(1, 'age', 20, null, null)
@@ -51,6 +42,7 @@ test.only('using temporary files', tt => {
         if (delta.value === 40) {
           const written = fs.readFileSync(file, 'utf8')
           t.equal(written, text3)
+          db.close()
           t.end()
         }
       })
@@ -75,6 +67,7 @@ test.only('using temporary files', tt => {
         { seq: 2, subject: 2, property: 'age', value: 22 },
         { seq: 3, subject: 1, property: 'age', value: 40 }
       ])
+      db.close()
       t.end()
     })
 
@@ -139,6 +132,7 @@ test.only('using temporary files', tt => {
         })
         t.pass('deltas did increment in sequence')
         t.comment('test dir was: ' + tmp)
+        db.close()
         t.end()
       }
     }

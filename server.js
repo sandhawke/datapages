@@ -137,8 +137,11 @@ class Server {
   }
   */
 
-  close (...args) {
-    return this.transport.close(...args)
+  async close (...args) {
+    await Promise.all([
+      this.db.close(),
+      this.transport.close(...args)
+    ])
   }
   // start, stop?
 }

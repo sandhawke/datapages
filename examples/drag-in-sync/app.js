@@ -37,5 +37,3 @@ db.listenSince(0, 'change', (page, delta) => {
 addEventListener('mousemove', ev => {
   me.mouseAt = [ev.clientX, ev.clientY]
 })
-
-

@@ -1,77 +1,112 @@
 'use strict'
 /*
 
-  Implements the L1 (primitive) interface
+  Store deltas in a flat file, eg a CSV file
 
-  There was kinda-working version with no storage and all-async, at
-  https://github.com/sandhawke/datapages/blob/64432ceb79d46ecae85acd4ba709028f973766d8/store-csv.js
-  before I deciding simplicity was much more important than
-  performance for now
+  TODO: make a version with no this.deltas, that just streams the file
+  out; could run on lower memory systems as deltas gets big.
 
-  TODO maybe add other forms : .jsonl .cbor .nquads
+  TODO: make _loadState fast, even with huge file, by recording in a
+  status.json file an offset into the main file where the max targetID
+  was written, which ought to be very near the end.  I think that
+  avoids any races.  **OR** switch to one of the versions of create
+  where we don't need to know the object number, maybe
+
+  TODO: add other forms : .jsonl .cbor .nquads
+
+  TODO: tools for saving space by forgetting short-lived values
 
 */
 
-const debugM = require('debug')
 const fs = require('fs')
-const mutexify = require('mutexify')
 const dsv = require('d3-dsv')
 const BaseDB = require('./basedb')
 
-let instanceCounter = 0
-
 class FlatFile extends BaseDB {
-  constructor (filename, options = {}) {
+  constructor (filename = 'deltas.csv', options = {}) {
     super()
     Object.assign(this, options)
 
     this.filename = filename
-    if (!this.debugName) this.debugName = ++instanceCounter
-    if (!this.debug) this.debug = debugM('datapages_store_csv_' + this.debugName)
 
-    this.lockA = mutexify()
-    this.outbuf = []
-    this.outbufcb = []
-    this.fileA = fs.openSync(this.filename, 'a')
-    this.debug('file descriptor', this.fileA)
-
-    // I don't like buffering them, but for now it makes the replay
-    // logic simpler, with no risk that we'll drop deltas that are
-    // being added while listenSince is doing its replay.
     this.deltas = new Set()
+    this.buffer = []
 
     this.writeHeader = true
-    this.boot()
-
-    let nextSave = this.nextDeltaID
-    this.on('save', (delta, details) => {
-      if (nextSave !== delta.seq) {
-        throw Error('bad sequence of saves ' + nextSave + ' --- ' + delta.seq)
-      }
-      nextSave++
-    })
+    this._loadState()
+    this._startWriter()
   }
 
   close () {
-    fs.closeSync(this.fileA)
-    this.fileA = null
+    return new Promise(resolve => {
+      this.debug('\n\n\n\n\n****************************   closing file %s', this.filename)
+      this.pleaseClose = () => {
+        // this will run when the output buffer has been written
+        fs.close(this.fileA, resolve)
+        this.fileA = null
+      }
+    })
   }
 
-  boot () {
-    this.debug('booting')
-    const input = fs.readFileSync(this.filename, 'utf8')
+  _startWriter () {
+    fs.open(this.filename, 'a', 0o600, (err, fd) => {
+      if (err) throw err
+      this.fileA = fd
+      this.debug('file %s open for append, fd %o', this.filename, fd)
+
+      if (this.writeHeader) {
+        this.writeHeader = false
+        const header = 'seq,subject,property,value,who,when\n'
+        fs.appendFile(this.fileA, header, {encoding: 'utf8'}, (err) => {
+          if (err) throw err
+          this._writeLoop()
+        })
+      } else {
+        this._writeLoop()
+      }
+    })
+  }
+
+  _writeLoop () {
+    this.debug('writeLoop running')
+    // we could do a join('') before calling appendFile, but some
+    // measurements suggest appendFile's buffering is at least as
+    // good
+    const entry = this.buffer.shift()
+    if (!entry) {
+      if (this.pleaseClose) {
+        this.pleaseClose()
+      } else {
+        setTimeout(() => { this._writeLoop() }, 10)
+      }
+      return
+    }
+    fs.appendFile(this.fileA, entry.text, {encoding: 'utf8'}, (err) => {
+      if (err) throw err
+      this.emit('save', entry.delta)
+      this._writeLoop()
+    })
+  }
+
+  async replaySince (seq, name, cb) {
+    for (const delta of this.deltas) {
+      cb(delta.subject, delta)
+    }
+  }
+
+  _loadState () {
+    this.debug('_loadState running')
+    let input = ''
+    try {
+      input = fs.readFileSync(this.filename, 'utf8')
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err
+    }
     this.debug('input as %d chars', input.length)
     let maxS = 0
     let maxD = 0
     const output = dsv.csvParse(input)
     this.debug('parsed whole as %O', output)
-    /*
-    if (output.length === 1 && output[0].length === 1 && output[0][0] === '') {
-      this.debug('workout bug in CSV, for empty input returns [[""]]')
-      output.shift()
-    }
-    */
-    // this.debug('parsed whole as %O', output)
     for (const record of output) {
       this.writeHeader = false
       this.debug('parsed CSV %j', record)
@@ -113,36 +148,6 @@ class FlatFile extends BaseDB {
     return id
   }
 
-  /*
-    Read the file, streaming out the deltas
-
-    Used to be async from file, in version linked above...
-  */
-  OLDlistenSince (seq, name, cb) {
-    if (name !== 'change') throw Error('only "change" events implemented in listenSince')
-    this.debug('listenSince starts')
-    for (const delta of this.deltas) {
-      cb(delta.subject, delta)
-    }
-    this.debug('replay done')
-    this.emit('stable')  // replay-done?
-    this.on('change', cb)
-    this.debug('listenSince returning')
-  }
-
-  async replaySince (seq, name, cb) {
-    for (const delta of this.deltas) {
-      cb(delta.subject, delta)
-    }
-    // this isn't right -- someone else might be mid-replay
-    // this.emit('stable')
-    // Hopefully this promise resolving is the right signal
-  }
-
-  // which is better?
-  // async applyDelta(delta) {
-  //     let {subject, property, value, who, when} = delta
-
   applyDelta (delta) {
     this.debug('applyDelta() %o', delta)
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
@@ -163,79 +168,12 @@ class FlatFile extends BaseDB {
       }
     }
 
-    if (this.writeHeader) {
-      this.outbuf.push('seq,subject,property,value,who,when\n')
-      this.writeHeader = false
-    }
-
     const record = [seq, subject, property, value, who, when]
     this.debug('record: %o', record)
-    let output = dsv.csvFormatRows([record])
-    this.debug('as cvs: %o', output)
-    this.outbuf.push(output + '\n')
-    this.outbufcb.push(() => {
-      this.emit('save', delta, { filename: this.filename })
-    })
-
-    // mutex so that we only have one outstanding fs.appendFile at
-    // once because sometimes (like 1 in 100k calls) they end up being
-    // written out-of-order.  This also makes it easy to buffer up the
-    // writes, which maybe speeds this up a little.
-    this.lockA(release => {
-      this.debug('writing %d lines', this.outbuf.length)
-      if (this.outbuf.length) {
-        if (this.fileA === null) {
-          this.debug('write after close')
-        } else {
-          // atomically make our copies of outbuf and outbufcb
-          const outtext = this.outbuf.join('')
-          const outcbs = this.outbufcb
-          this.outbuf = []
-          this.outbufcb = []
-          // now we can go off while doing the appendFile, and others
-          // can be adding to the new outbuf + outbufcb
-          fs.appendFile(this.fileA, outtext, {encoding: 'utf8'}, (err) => {
-            if (err) throw err
-            release()
-            for (const cb of outcbs) {
-              cb()
-            }
-          })
-          this.outbuf = []
-          this.outbufcb = []
-        }
-      }
-    })
+    let text = dsv.csvFormatRows([record]) + '\n'
+    this.debug('as cvs: %o', text)
+    this.buffer.push({delta, text})
   }
-
-    /*
-
-      }
-
-      if (delta.seq + 1 !== this.nextDeltaID) throw Error('unexpected async')
-
-      fs.appendFileSync(this.fileA, output + '\n', {encoding: 'utf8'})
-      this.emit('save', delta, { filename: this.filename })
-
-      /*
-        about once in 100k times, one of these gets delayed and occurs
-        in the file slightly out of sequence, so we use Sync instead :-(
-
-        trying with mutexify, also no working, for other reasons TBD.
-
-        Probably best would be to buffer up all the writes during one write,
-        then proceed with them.  Mutexify should do that nicely.
-
-      this.lockA(release => {
-        this.debug('got lock for %o', output)
-        fs.appendFile(this.fileA, output + '\n', {encoding: 'utf8'}, (err) => {
-          if (err) throw err
-          release()
-          this.emit('save', delta, { filename: this.filename })
-
-        })
-      })
-      */
 }
 
 module.exports = FlatFile

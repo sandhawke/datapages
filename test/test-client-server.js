@@ -47,6 +47,14 @@ function forEachTransport (t, run, makeDB) {
     const c = new datapages.RawClient({transport: f.connectedClient()})
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
     const r = new datapages.Remote({transport: f.connectedClient()})
+    atEnd(tt, () => {
+      return Promise.all([
+        r.close(),
+        c.close(),
+        c2.close(),
+        s.close()
+      ])
+    })
     run(tt, s, c, c2, r)
   })
 
@@ -66,10 +74,12 @@ function forEachTransport (t, run, makeDB) {
       const c2 = new datapages.RawClient(options)
       const r = new datapages.Remote(options)
       atEnd(tt, () => {
-        r.close()
-        c.close()
-        c2.close()
-        s.close()
+        return Promise.all([
+          r.close(),
+          c.close(),
+          c2.close(),
+          s.close()
+        ])
       })
       run(tt, s, c, c2, r)
     })
