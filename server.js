@@ -36,13 +36,14 @@ class Server {
   onDelta (conn, delta) {
     this.debug('heard delta from %o: %o', conn.sessionData._sessionID,
                delta)
-    delta.who = conn.sessionData._sessionID
-    delta.when = new Date()
-    delta.seq = undefined
+    const dd = Object.assign({}, delta)
+    dd.who = conn.sessionData._sessionID
+    dd.when = new Date()
+    dd.seq = undefined
 
-    this.mapInboundDelta(conn, delta)
-    this.debug('applying locally as %o', delta)
-    this.db.applyDelta(delta)
+    this.mapInboundDelta(conn, dd) // maybe change these to returning copy?
+    this.debug('applying locally as %o', dd)
+    this.db.applyDelta(dd)
   }
 
   mapInboundID (conn, cid) {
@@ -92,10 +93,9 @@ class Server {
     this.debug('heard subscribe from %o', conn.sessionData._sessionID)
     this.db.listenSince(seq, 'change', (pg, delta) => {
       this.debug('sending delta to %o %o', pg, delta)
-
-      this.mapOutboundDelta(conn, delta)
-
-      conn.send('delta', delta)
+      const dd = Object.assign({}, delta)
+      this.mapOutboundDelta(conn, dd)
+      conn.send('delta', dd)
     })
   }
 

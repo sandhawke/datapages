@@ -144,9 +144,11 @@ class FlatFile extends BaseDB {
   //     let {subject, property, value, who, when} = delta
 
   applyDelta (delta) {
+    this.debug('applyDelta() %o', delta)
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
     this.deltas.add(delta)
     this.emit('delta', delta)
+    this.debug(' after emit() %o', delta)
 
     let {seq, subject, property, value, who, when} = delta
     value = JSON.stringify(value)
