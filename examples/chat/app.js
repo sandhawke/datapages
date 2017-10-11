@@ -49,17 +49,21 @@ const usersById = new Map()
 
 const v = db.view({filter: {chatting: true}})
 v.listenSince(0, 'change', (page, delta) => {
-  if (!page.__e) {
-    page.__e = document.createElement('li')
-    users.appendChild(page.__e)
+  console.log(delta)
+  if (!page.__seen) {
+    // if (!delta.who) return
     usersById.set(delta.who, page)
   }
-  let text = 'user: ' + (page.name ? page.name : '<em>anon</em>') + delta.who
-  if (page === me) {
-    text += ' (you)'
+  let text = ''
+  for (const [id, user] of usersById) {
+    text += `visitorNumber=${id}, name=${JSON.stringify(user)}<br>\n`
   }
-  page.__e.innerHTML = text
-})
+  users.innerHTML = text
+  // let text = 'user: ' + (page.name ? page.name : '<em>anon</em>') + delta.who
+  // if (page === me) {
+  // text += ' (you)'
+  // }
+  })
 
 db.view({filter: {isMessage: true}})
   .listenSince(0, 'change', (page, delta) => {
