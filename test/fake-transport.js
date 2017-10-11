@@ -14,6 +14,8 @@ class Server extends EventEmitter {
     conn.sessionData = {
       _sessionID: ++connectionCounter
     }
+    conn.sessionData.id = conn.sessionData._sessionID
+    client.sessionData = conn.sessionData
 
     conn.send = (...args) => {
       client.emit(...args)

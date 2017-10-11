@@ -19,8 +19,19 @@ const debug = require('debug')('datapages_test_client_server')
 const fs = require('fs')
 const path = require('path')
 const transport = require('./fake-transport')
+const atEnd = require('tape-end-hook')
+const mockDate = require('mockdate')
 
-const doWebgram = false
+mockDate.set('2/1/1988', 120)
+debug('date mocked to', new Date())
+
+const doWebgram = true
+
+function sleep (ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
 
 function forEachTransport (t, run, makeDB) {
   const tmp = fs.mkdtempSync('/tmp/datapages-test-')
@@ -30,30 +41,14 @@ function forEachTransport (t, run, makeDB) {
     makeDB = () => new MinDB()
   }
 
-  t.test('. with fake (local) transport', tt => {
+  t.test('. with fake (local) transport', async (tt) => {
     const f = new transport.Server()
     const s = new Server({transport: f, db: makeDB(tmp)})
     const c = new datapages.RawClient({transport: f.connectedClient()})
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
-    run(tt, s, c, c2)
+    const r = new datapages.Remote({transport: f.connectedClient()})
+    run(tt, s, c, c2, r)
   })
-
-  /*
-  t.test('. with fake transport to FlatFile', tt => {
-    const f = new transport.Server()
-    tt.datafile = path.join(tmp, 'data.csv')
-    fs.writeFileSync(tt.datafile, `seq,subject,property,value,who,when
-1,1,color,"""red""",,2017-10-09T14:26:07.783Z
-`, 'utf8')
-    const s = new Server({
-      transport: f,
-      db: new datapages.FlatFile(tt.datafile)
-    })
-    const c = new datapages.RawClient({transport: f.connectedClient()})
-    const c2 = new datapages.RawClient({transport: f.connectedClient()})
-    run(tt, s, c, c2)
-  })
-*/
 
   if (doWebgram) {
     t.test(' . with webgram', async (tt) => {
@@ -63,9 +58,20 @@ function forEachTransport (t, run, makeDB) {
         sessionOptions: { serverSecretsDBName: secrets },
         db: makeDB(tmp)})
       await s.transport.start()
-      const c = new datapages.RawClient({serverAddress: s.transport.address})
-      const c2 = new datapages.RawClient({serverAddress: s.transport.address})
-      run(tt, s, c, c2)
+      const options = {
+        serverAddress: s.transport.address,
+        skipResume: true // otherwise we might reuse auth for old test server on same port
+      }
+      const c = new datapages.RawClient(options)
+      const c2 = new datapages.RawClient(options)
+      const r = new datapages.Remote(options)
+      atEnd(tt, () => {
+        r.close()
+        c.close()
+        c2.close()
+        s.close()
+      })
+      run(tt, s, c, c2, r)
     })
   }
 }
@@ -178,8 +184,9 @@ test('chain', t => {
 })
 */
 
+let datafile
 const makeSampleDB = (tmp) => {
-  const datafile = path.join(tmp, 'data.csv')
+  datafile = path.join(tmp, 'data.csv')
   fs.writeFileSync(datafile, `seq,subject,property,value,who,when
 1,1,color,"""red""",,2017-10-09T14:26:07.783Z
 `, 'utf8')
@@ -198,7 +205,7 @@ const getEvents = async (db) => {
 
   await db.listenSince(0, 'change', buffer)
 
-  // listenSince over the network doesn't handle this right?!
+  // listenSince over the network BUG : resolves too early.
   await sleep(100)
 
   db.off('change', buffer)
@@ -208,6 +215,7 @@ const getEvents = async (db) => {
 test('1 delta', tt => {
   const f = async (t, s, c, c2) => {
     const buff = await getEvents(c)
+    debug('got buff %O', buff)
     t.deepEqual(buff, [
       [ 1, { seq: 1,
         subject: 1,
@@ -235,8 +243,63 @@ test('1 delta again', tt => {
   forEachTransport(tt, f, makeSampleDB)
 })
 
-function sleep (ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
+test('into a proxy', tt => {
+  const f = async (t, s, c, c2, r) => {
+    const buff = await getEvents(r)
+    const subj = buff[0][0]
+    t.equal(subj.color, 'red')
+    t.deepEqual(buff, [
+      [ subj, { seq: 1,
+        subject: subj,
+        property: 'color',
+        value: 'red',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
+    ])
+    t.end()
+  }
+  forEachTransport(tt, f, makeSampleDB)
+})
+
+test('change via proxy', tt => {
+  const f = async (t, s, c, c2, r) => {
+    const pup = r.create()
+    pup.color = 'brown'
+    await getEvents(r)
+    /*  -- not quite working --
+    const buff = await getEvents(r)
+    const s2 = buff[0][0]
+    const s1 = buff[1][0]
+    t.deepEqual(buff, [
+      [ s1, { seq: 1,
+        subject: s1,
+        property: 'color',
+        value: 'red' } ], // hasn't hit server yet at this point
+      [ s2, { seq: 1, // BUG: why is this **ONE** ?!
+        subject: s2,
+        property: 'color',
+        value: 'brown',
+        when: new Date('2017-10-09T14:26:07.783Z')} ]
+    ])
+    */
+    debug('r.rawClient %O', r.rawClient.transport.sessionData)
+    const id = r.rawClient.transport.sessionData.id
+    setTimeout(() => {
+      const text = fs.readFileSync(datafile, 'utf8')
+      t.equal(text, `seq,subject,property,value,who,when
+1,1,color,"""red""",,2017-10-09T14:26:07.783Z
+2,2,color,"""brown""",${id},1988-02-01T05:00:00.000Z
+`)
+      t.end()
+    }, 100)
+    /*
+    t.deepEqual(buff, [
+      [ 1, { seq: 1,
+             subject: 1,
+             property: 'color',
+             value: 'red',
+             when: new Date('2017-10-09T14:26:07.783Z')} ]
+    ])
+    t.end() */
+  }
+  forEachTransport(tt, f, makeSampleDB)
+})

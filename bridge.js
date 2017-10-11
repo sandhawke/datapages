@@ -1,7 +1,8 @@
 'use strict'
 
-// use symbols we add to the proxies/handles but that means they can't
-// be integer ids.   Poop.   weakmap wouldn't work either.
+// Consider: instead of our complex this.map structure, use symbols we
+// add to the proxies/handles.  BUT that means they can't be integer
+// ids.  Poop.  weakmap wouldn't work either.
 
 const setdefault = require('setdefault')
 const debug = require('debug')('datapages_bridge')
@@ -52,19 +53,21 @@ class Bridge {
           } else {
             debug('sinkHandle already exists; reusing %o', sinkHandle)
           }
+
           // we should flag this as now headed DOWNSTREAM, and it shouldn't
           // turn around and head UPSTREAM.  Or something like that.  This
           // will be a problem if there's a delay, as it'll change values
           // back, and then loop.
           //
           // or have delta ids, and you've already seen it?
+          //     DOING THIS FOR NOW
           //
-          // or maybe some kind of hop counter?
           //
-          debug('setProperty %o %O', sinkHandle, delta)
+
           const dd = Object.assign({}, delta)
           dd.subject = sinkHandle
           sink.applyDelta(dd)
+          debug('delta handled', dd)
         }
         src.listenSince(0, 'change', listener)
         this.listens.push([src, listener])

@@ -10,8 +10,8 @@ const MinDB = require('./mindb')
 class Remote extends InMem {
   constructor (options) {
     super()
-    const client = new RawClient(options)
-    this.bridge(client)
+    this.rawClient = new RawClient(options)
+    this.bridge(this.rawClient)
   }
 }
 
