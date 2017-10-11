@@ -3,12 +3,15 @@
 const datapages = require('datapages')
 
 const debug = require('debug')('datapages_example_pinboard')
-localStorage.debug = '*'
+localStorage.debug = ''   // debugging slows it down a lot
 debug('debugging')
 
 const db = new datapages.Remote(window.serverAddress)
 
-document.body.innerHTML = '<div></div>'
+document.body.innerHTML = '<div>(loading data)</div>'
+
+const status  = document.createElement('div')
+document.body.appendChild(status)
 
 const me = db.create({
   runningAt: document.location.href,
@@ -20,6 +23,7 @@ const me = db.create({
 // drag?
 
 db.listenSince(0, 'change', (page, delta) => {
+  status.innerHTML = '<pre>Delta: ' + JSON.stringify(delta, null, 2) + '</pre>'
   debug('change: %o %o', page, delta)
   if (page.mouseAt && page.text) {
     const [x, y] = page.mouseAt

@@ -42,6 +42,10 @@ class Bridge {
             debug('already seen by me, ignoring')
             return
           }
+          if (delta.property.startsWith('__')) {
+            debug('db-local property, not brigding')
+            return
+          }
           delta[bridgeTag] = true
           let sinkHandle = forward.get(pg)
           if (sinkHandle === undefined) {

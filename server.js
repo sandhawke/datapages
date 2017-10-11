@@ -20,7 +20,7 @@ class Server {
 
     if (!this.dbName) this.dbName = 'server-data'
     if (!this.db) {
-      this.db = new FlatFile(options.dbName + '.csv')
+      this.db = new FlatFile(this.dbName + '.csv')
     }
     // relies on db already having figure out nextObjectID which
     // would have been nice to be async
