@@ -1,5 +1,11 @@
 'use strict'
 
+// maybe command line for file to use, for saving
+
+// maybe command line for one app
+
+// maybe command line for port
+
 const datapages = require('datapages')
 const browserify = require('browserify')
 const launcher = require('james-browser-launcher')
@@ -70,20 +76,13 @@ ${script}
   }
 
   function js (req, res) {
-    try {
-      const appjs = browserify(path.join(__dirname, req.params.app, 'app'))
-      appjs.bundle().on('error', function (err) {
-        console.error('CAUGHT ERROR', err)
-        res.set('Content-Type', 'application/javascript');
-        res.send('alert("error packaging app")')
-        this.emit('end')
-      }).pipe(res)
-      // appjs.bundle().pipe(res)
-    } catch (e) {
-      console.err(e)
+    const appjs = browserify(path.join(__dirname, req.params.app, 'app'))
+    appjs.bundle().on('error', function (err) {
+      console.error('CAUGHT ERROR', err)
       res.set('Content-Type', 'application/javascript');
       res.send('alert("error packaging app")')
-    }
+      this.emit('end')
+    }).pipe(res)
   }
 }
 
