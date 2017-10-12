@@ -124,7 +124,10 @@ class InMem extends BaseDB {
   proxyHandlerForGet (target, name, receiver) {
     // this.debug('GET NAME', name)
     // this.debug('handling GET %j on data %o', name, target)
-    if (target._deleted) throw Error('accessing deleted object')
+
+    // nah, let people still read it, eg during 'disappear' handling
+    // if (target._deleted) throw Error('accessing deleted object')
+    
     // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
 
     if (name === util.inspect.custom || name === 'inspect') {
@@ -155,7 +158,7 @@ class InMem extends BaseDB {
 
   proxyHandlerForSet (target, name, value, receiver) {
     this.debug('handling SET .%j=%o  on data %o', name, value, target)
-    if (target._deleted) throw Error('accessing deleted object')
+    if (target._deleted) throw Error('changing deleted object')
     // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
     this.setProperty(receiver, name, value)
     return true
