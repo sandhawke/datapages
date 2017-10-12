@@ -4,7 +4,8 @@ const datapages = require('datapages')
 const setdefault = require('setdefault')
 const db = new datapages.Remote(window.serverAddress)
 
-document.body.innerHTML = `<div>
+const body = document.getElementById('app')
+body.innerHTML = `<div>
 <p>Your Nick: <input type="text" id="name"></p>
 
 <p>Recently seen users:</p>
@@ -40,7 +41,7 @@ compose.onkeypress = function (ev) {
 
 
 const status  = document.createElement('div')
-document.body.appendChild(status)
+body.appendChild(status)
 
 
 db.listenSince(0, 'change', (page, delta) => {

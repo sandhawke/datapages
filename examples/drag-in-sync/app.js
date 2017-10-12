@@ -7,11 +7,11 @@ localStorage.debug = ''   // debugging slows it down a lot
 debug('debugging')
 
 const db = new datapages.Remote(window.serverAddress)
-
-document.body.innerHTML = '<div>(loading data)</div>'
+const body = document.getElementById('app')
+body.innerHTML = '<div>(loading data)</div>'
 
 const status  = document.createElement('div')
-document.body.appendChild(status)
+body.appendChild(status)
 
 const me = db.create({
   runningAt: document.location.href,
@@ -29,7 +29,7 @@ db.listenSince(0, 'change', (page, delta) => {
     const [x, y] = page.mouseAt
     if (!page.__element) {   // leading "__" make is private for us
       page.__element = document.createElement('div')
-      document.body.appendChild(page.__element)
+      body.appendChild(page.__element)
     }
     page.__element.innerHTML = page.text
     page.__element.style.position = 'absolute'
