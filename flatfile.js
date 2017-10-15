@@ -106,6 +106,7 @@ class FlatFile extends BaseDB {
       if (err.code !== 'ENOENT') throw err
     }
     this.debug('input as %d chars', input.length)
+    // this.debug('input was', input)
     let maxS = 0
     let maxD = 0
     const output = dsv.csvParse(input)

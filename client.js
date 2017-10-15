@@ -26,7 +26,7 @@ class Client extends BaseDB {
     this.transport.on('delta', delta => {
       this.debug('heard delta %o', delta)
       delta.value = this.refs.from(delta.value)
-      delta.when = new Date(delta.when)
+      if (delta.when) delta.when = new Date(delta.when)
       this.emit('delta', delta)
     })
   }

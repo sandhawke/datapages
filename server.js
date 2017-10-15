@@ -18,6 +18,14 @@ class Server {
     if (!this.db) {
       this.db = new FlatFile(this.dbName + '.csv')
     }
+    if (this.doOwners) {
+      // probably only works on flatfile and mindb, not inmem, but
+      // I think that's true elsewhere in this code already
+      if (this.db.nextSubjectID === 1) {
+        // can get tricked by manual file
+        this.systemID = this.db.create()
+      }
+    }
 
     if (!this.transport) {
       if (!options.sessionOptions) options.sessionOptions = {}
@@ -29,8 +37,8 @@ class Server {
         const id = this.db.create()
         console.log('dispensing session id', id)
         if (this.doOwners) {
-          this.db.setProperty(id, '_owner', id)
-          this.db.setProperty(id, '_isSession', true)
+          this.db.setProperty(id, '_owner', id, this.systemID, new Date())
+          this.db.setProperty(id, '_isSession', true, this.systemID, new Date())
         }
         return id
       }
@@ -47,7 +55,7 @@ class Server {
       this.transport.on('$session-active', conn => {
         const that = this
         const connObj = this.db.create({isConnection: true,
-                                        session: conn.sessionData._sessionID})
+                                        session: conn.sessionData._sessionID}, this.systemID, new Date())
         const f = function f (deletedConn) {
           if (deletedConn === conn) {
             that.db.delete(connObj)
@@ -94,7 +102,8 @@ class Server {
       sid = this.db.create()
       console.log('dispensing OBJECT id', sid)
       if (this.doOwners) {
-        this.db.setProperty(sid, '_owner', conn.sessionData._sessionID)
+        this.db.setProperty(sid, '_owner', conn.sessionData._sessionID,
+                            this.systemID, new Date())
       }
       conn.sidFor.set(cid, sid)
       conn.cidFor.set(sid, cid)

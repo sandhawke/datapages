@@ -89,10 +89,10 @@ class DB extends EventEmitter {
     throw Error('subclass needs to implement applyDelta method')
   }
   
-  create (overlay) {
+  create (overlay, who, when) {
     const id = this.createBlank()
     if (overlay) {
-      this.overlay(id, overlay)
+      this.overlay(id, overlay, who, when)
     }
     return id
   }

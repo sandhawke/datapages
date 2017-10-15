@@ -17,9 +17,10 @@ const atEnd = require('tape-end-hook')
 const mockDate = require('mockdate')
 
 mockDate.set('2/1/1988', 120)
-debug('date mocked to', new Date())
+const fakeNow = new Date()
+debug('date mocked to', fakeNow)
 
-const doWebgram = true
+const doWebgram = false
 
 function sleep (ms) {
   return new Promise((resolve) => {
@@ -30,14 +31,18 @@ function sleep (ms) {
 function forEachTransport (t, run, makeDB) {
   const tmp = fs.mkdtempSync('/tmp/datapages-test-')
   t.comment(' ... forEachTransport, in tmp ' + tmp)
+  if (!t.serverOptions) t.serverOptions = {}
 
   if (!makeDB) {
     makeDB = () => new datapages.MinDB()
   }
 
   t.test('. with fake (local) transport', async (tt) => {
+    const servOpts = Object.assign({}, t.serverOptions)
     const f = new transport.Server()
-    const s = new datapages.Server({transport: f, db: makeDB(tmp)})
+    servOpts.transport = f
+    if (!servOpts.db) servOpts.db = makeDB(tmp)
+    const s = new datapages.Server(servOpts)
     const c = new datapages.RawClient({transport: f.connectedClient()})
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
     const r = new datapages.Remote({transport: f.connectedClient()})
@@ -54,11 +59,13 @@ function forEachTransport (t, run, makeDB) {
 
   if (doWebgram) {
     t.test(' . with webgram', async (tt) => {
+      const servOpts = Object.assign({}, t.serverOptions)
+      if (!servOpts.db) servOpts.db = makeDB(tmp)
       const secrets = path.join(tmp, 'server-secrets')
-      // console.log('XXX', secrets)
-      const s = new datapages.Server({
-        sessionOptions: { serverSecretsDBName: secrets },
-        db: makeDB(tmp)})
+      if (!servOpts.sessionOptions) servOpts.sessionOptions = {
+        serverSecretsDBName: secrets
+      }
+      const s = new datapages.Server(servOpts)
       await s.transport.start()
       const options = {
         serverAddress: s.transport.address,
@@ -286,12 +293,14 @@ test('change via proxy', tt => {
     ])
     */
     debug('r.rawClient %O', r.rawClient.transport.sessionData)
+    // these values vary, so peek in and get them, so we can match output
     const id = r.rawClient.transport.sessionData.id
+    const seq = s.db.nextSubjectID - 1
     setTimeout(() => {
       const text = fs.readFileSync(datafile, 'utf8')
       t.equal(text, `seq,subject,property,value,who,when
 1,1,color,"""red""",,2017-10-09T14:26:07.783Z
-2,2,color,"""brown""",${id},1988-02-01T05:00:00.000Z
+2,${seq},color,"""brown""",${id},1988-02-01T05:00:00.000Z
 `)
       t.end()
     }, 100)
@@ -307,3 +316,24 @@ test('change via proxy', tt => {
   }
   forEachTransport(tt, f, makeSampleDB)
 })
+
+test.only('simple doOwners', tt => {
+  const f = async (t, s, c, c2, r) => {
+    const buff = await getEvents(c)
+    t.deepEqual(buff, [
+      [ 2, { subject: 2, property: 'isConnection', value: true, who: 1, when: fakeNow, seq: 1 } ],
+      [ 2, { subject: 2, property: 'session', value: 1, who: 1, when: fakeNow, seq: 2 } ],
+      [ 3, { subject: 3, property: 'isConnection', value: true, who: 1, when: fakeNow, seq: 3 } ],
+      [ 3, { subject: 3, property: 'session', value: 2, who: 1, when: fakeNow, seq: 4 } ],
+      [ 4, { subject: 4, property: 'isConnection', value: true, who: 1, when: fakeNow, seq: 5 } ],
+      [ 4, { subject: 4, property: 'session', value: 3, who: 1, when: fakeNow, seq: 6 } ] 
+    ])
+    t.end()
+  }
+  tt.serverOptions = {
+    doOwners: true
+  }
+  forEachTransport(tt, f)
+})
+
+
