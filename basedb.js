@@ -7,7 +7,7 @@
 
 const EventEmitter = require('eventemitter3')
 const Bridge = require('./bridge')
-const View = require('./view')
+// const View = require('./view')
 const debugM = require('debug')
 
 // make ourselves some find debugging labels, so this.debug tells us
@@ -64,9 +64,14 @@ class DB extends EventEmitter {
     return new Bridge(this, other)
   }
 
+  /*
+    Conceptually this is here, but to avoid circularity we actualy
+    patch this in from view.js
+
   view (options) {
     return new View(options, this)
   }
+  */
 
   setProperty (subject, property, value, who, when) {
     const delta = {subject, property, value}
@@ -76,6 +81,14 @@ class DB extends EventEmitter {
     this.applyDelta(delta)
   }
 
+  createBlank () {
+    throw Error('subclass needs to implement createBlank method')
+  }
+  
+  applyDelta () {
+    throw Error('subclass needs to implement applyDelta method')
+  }
+  
   create (overlay) {
     const id = this.createBlank()
     if (overlay) {

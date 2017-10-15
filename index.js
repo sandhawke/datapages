@@ -6,6 +6,7 @@ const RawClient = require('./client')
 const InMem = require('./inmem')
 const FlatFile = require('./flatfile')
 const MinDB = require('./mindb')
+const View = require('./view') // also has side effects
 
 class Remote extends InMem {
   constructor (options) {
@@ -23,4 +24,4 @@ class Remote extends InMem {
   }
 }
 
-module.exports = { InMem, FlatFile, MinDB, RawClient, Server, Remote }
+module.exports = { InMem, FlatFile, MinDB, RawClient, Server, Remote, View }

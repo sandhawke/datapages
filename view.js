@@ -3,6 +3,7 @@
 const debug = require('debug')('datapages_view')
 const EventEmitter = require('eventemitter3')
 const Filter = require('./filter').Filter
+const BaseDB = require('./basedb')
 
 // base might be a DB() or another "upstream" View.  We're always more
 // restrictive than the base, narrowing which pages appear.
@@ -10,7 +11,7 @@ const Filter = require('./filter').Filter
 // base must make available the current state of its members, it can't just
 // passthrough deltas.    but they don't need to be enumerable...
 
-class View extends EventEmitter {
+class View extends BaseDB {
   constructor (options = {}, base) {
     super()
     Object.assign(this, options)
@@ -33,9 +34,9 @@ class View extends EventEmitter {
     this.base.on('change', (page, delta) => {
       const [was, is] = this.consider(page, delta)
       if (is) {
-        debug('view emiting "change"', was, is)
+        debug('view emiting "delta"', was, is)
         // maybe:  delta.target = page ?
-        this.emit('change', page, delta)
+        this.emit('delta', delta)
       }
     })
 
@@ -177,5 +178,10 @@ View.prototype[Symbol.iterator] = function () {
   return this.items()
 }
 
+// can't put this in basedb.js because it would be a circular class
+// definition
+BaseDB.prototype.view = function (options) {
+  return new View(options, this)
+}
 
 module.exports = View
