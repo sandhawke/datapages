@@ -16,6 +16,7 @@ class Bridge {
     this.dbs = dbs
     this.listens = []
     const map = new Map()
+    this.map = map
     // map.get(src).get(sink).get(srcObj) == sinkObj
     // map.get(sink).get(src).get(sinkObj) = srcObj
 
@@ -77,6 +78,10 @@ class Bridge {
         this.listens.push([src, listener])
       }
     }
+  }
+
+  reach (fromContext, toContext, handle) {
+    return this.map.get(fromContext).get(toContext).get(handle)
   }
 
   stop () {
