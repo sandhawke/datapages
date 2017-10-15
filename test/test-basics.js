@@ -90,7 +90,7 @@ async function RemoteNetworkServer () {
     }
     await s.close()
   }
-  console.log('client set up')
+  // console.log('client set up')
   return c
 }
 
