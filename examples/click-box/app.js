@@ -1,11 +1,5 @@
 'use strict'
 
-/*
-  This should probably use db.delete, instead of page.clicked
-
-  And maybe appear/disappear instead of change
-*/
-
 const datapages = require('datapages')
 
 const db = new datapages.Remote(window.serverAddress)
@@ -45,7 +39,7 @@ boxes.listenSince(0, 'appear', (page, delta) => {
   // console.log('appear', page, delta)
   status.innerHTML = '<pre>Delta: ' + JSON.stringify(delta, null, 2) + '</pre>'
   let box = page.__box
-  if (!box) {
+  if (!box) {  // 'appear' events are allowed to be duplicated
     box = document.createElement('div')
     box.style.padding = '1em'
     box.style.width = '200px'
@@ -59,6 +53,7 @@ boxes.listenSince(0, 'appear', (page, delta) => {
       console.log('DELETE', page)
       db.delete(page)
     })
+    // could do a drag-watcher, too...
     box.innerHTML = '<p>created by session ' + (delta.who || db.sessionData.id) + '</p><p>anyone can click to close</p>'
   }
 })
@@ -78,9 +73,3 @@ boxes.on('disappear', page => {
   let box = page.__box
   box.style.display = 'none'
 })
-
-/*
-  addEventListener('mousemove', ev => {
-  me.mouseAt = [ev.clientX, ev.clientY]
-  })
-*/

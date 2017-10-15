@@ -1,5 +1,8 @@
 'use strict'
 
+// BUG -- server-secrets lasts a while, recognizing clients, while the
+// db which hands out ids does NOT.
+
 // maybe command line for file to use, for saving
 
 // maybe command line for one app
@@ -14,7 +17,9 @@ const glob = require('glob')
 
 async function start () {
   const dps = new datapages.Server({db: new datapages.MinDB(),
-                                    port: process.env.PORT || 1978})
+                                    port: process.env.PORT || 1978,
+                                    doOwners: true
+                                   })
 
   dps.db.on('change', (page, delta) => {
     console.log('page changed %o', delta)

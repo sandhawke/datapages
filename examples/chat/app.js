@@ -2,10 +2,14 @@
 
 const datapages = require('datapages')
 const setdefault = require('setdefault')
+// const debug = require('debug')
+
 const db = new datapages.Remote(window.serverAddress)
 
 const body = document.getElementById('app')
 body.innerHTML = `<div>
+<div id="pusers" style="float: right"></div>
+
 <p>Your Nick: <input type="text" id="name"></p>
 
 <p>Recently seen users:</p>
@@ -22,6 +26,7 @@ const me = db.create({
 })
 
 const users = document.getElementById('users')
+const pusers = document.getElementById('pusers')
 const compose = document.getElementById('compose')
 const messages = document.getElementById('messages')
 const name = document.getElementById('name')
@@ -50,6 +55,11 @@ db.listenSince(0, 'change', (page, delta) => {
 
 const usersById = new Map()
 
+/*
+  TODO get rid of MERGE from here, and instead use
+  sessionData, making it be a proper proxied page
+  For Remote at least
+*/
 const merge = (id) => {
   const ul = []
   const versions = usersById.get(id)
@@ -82,6 +92,7 @@ const nm = (id, def) => {
 let id
 
 const v = db.view({filter: {chatting: true}})
+v.on('stable', paintUserList)
 v.listenSince(0, 'change', (page, delta) => {
   if (db.sessionData) id = db.sessionData.id
   
@@ -127,3 +138,14 @@ db.view({filter: {isMessage: true}})
   })
 
 
+function paintUserList (users) {
+  const nm = (page, def) => {
+    if (page.name) return page.name
+    return def
+  }
+  pusers.style.border = '1px solid #ddd'
+  pusers.style.borderRight =  'none'
+  pusers.style.padding = '0.5em'
+  console.log('users', Array.from(users))
+  pusers.innerHTML = Array.from(users).map(x => nm(x, '? anon') + '<br>').join('')
+}

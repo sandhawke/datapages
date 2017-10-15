@@ -14,23 +14,49 @@ class Server {
     if (!this.debugName) this.debugName = ++instanceCounter
     if (!this.debug) this.debug = debugM('datapages_server_' + this.debugName)
 
-    if (!this.transport) {
-      this.transport = new webgram.Server(options)
-    }
-
     if (!this.dbName) this.dbName = 'server-data'
     if (!this.db) {
       this.db = new FlatFile(this.dbName + '.csv')
     }
-    // relies on db already having figure out nextObjectID which
-    // would have been nice to be async
-    // this.idmapper = new IDMapper(this.db.nextObjectID)
+
+    if (!this.transport) {
+      if (!options.sessionOptions) options.sessionOptions = {}
+      // We have the db dispense our session ids, so that sessions ids
+      // ARE database objects.  The page with id sessionID is that
+      // session's public "about" page.   TODO only that session write
+      // it.
+      options.sessionOptions.dispenseSessionID = async () => {
+        const id = this.db.create()
+        console.log('dispensing session id', id)
+        if (this.doOwners) {
+          this.db.setProperty(id, '_owner', id)
+          this.db.setProperty(id, '_isSession', true)
+        }
+        return id
+      }
+      this.transport = new webgram.Server(options)
+    }
 
     this.transport.on('hello', (conn, a, b, c) => {
       this.debug('HELLO %o %o %o', a, b, c)
     })
     this.transport.on('delta', this.onDelta.bind(this))
     this.transport.on('subscribe', this.onSubscribe.bind(this))
+
+    if (this.doOwners) {
+      this.transport.on('$session-active', conn => {
+        const that = this
+        const connObj = this.db.create({isConnection: true,
+                                        session: conn.sessionData._sessionID})
+        const f = function f (deletedConn) {
+          if (deletedConn === conn) {
+            that.db.delete(connObj)
+            that.transport.off('$closed', f)
+          }
+        }
+        this.transport.on('$closed', f)
+      })
+    }
   }
 
   onDelta (conn, delta) {
@@ -43,6 +69,13 @@ class Server {
 
     this.mapInboundDelta(conn, dd) // maybe change these to returning copy?
     this.debug('applying locally as %o', dd)
+
+    // TODO: check that _sessionID === _owner, but right now we don't
+    // have an inmemory version of the _owner of every id.  We'd have
+    // to load that now, OR write it now knowing it might be something
+    // we'll ignore later on read-through.  IE it's a suggestion.
+    // HRM.
+    
     this.db.applyDelta(dd)
   }
 
@@ -59,6 +92,10 @@ class Server {
       this.debug('no sid for this yet')
 
       sid = this.db.create()
+      console.log('dispensing OBJECT id', sid)
+      if (this.doOwners) {
+        this.db.setProperty(sid, '_owner', conn.sessionData._sessionID)
+      }
       conn.sidFor.set(cid, sid)
       conn.cidFor.set(sid, cid)
     }
