@@ -22,7 +22,8 @@ class View extends EventEmitter {
 
     this.members = new Set()
 
-    this.base.on('stable', () => { this.emit('stable') })
+    // NO, determine this for ourselves
+    // this.base.on('stable', () => { this.emit('stable') })
 
     this.base.on('disappear', page => {
       this.members.delete(page)
@@ -130,6 +131,7 @@ class View extends EventEmitter {
   }
 
   items () {
+    debug('items() called')
     return this.members.values()
   }
 
@@ -170,5 +172,10 @@ class View extends EventEmitter {
     }
   }
 }
+
+View.prototype[Symbol.iterator] = function () {
+  return this.items()
+}
+
 
 module.exports = View

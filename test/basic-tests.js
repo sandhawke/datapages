@@ -11,25 +11,29 @@ const debug = require('debug')('datapages_basic_tests')
 // For InMem, they would just be the same instance.  For
 // Client+Server, they'd be two distinct clients on the same server.
 
+function sleep (ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 function run (test, maker) {
   debug('running')
 
   test('create-set-listen', async (t) => {
-    debug('test 1')
     t.comment('for store type ' + maker.name)
-    t.comment('awaiting maker')
     const db = await maker()
-    t.comment('maker created db')
     const created = db.create()
     db.setProperty(created, 'color', 'green')
     t.comment('property set')
-    db.listenSince(0, 'change', (pg, delta) => {
+    db.listenSince(0, 'change', async (pg, delta) => {
       // BUG t.equal(pg, created)
       // BUG t.equal(delta.subject, created)
       t.equal(delta.property, 'color')
       t.equal(delta.value, 'green')
       t.equal(delta.seq, 1)
-      db.close()
+      await db.close()
+      t.comment('closed')
       t.end()
     })
   })
@@ -37,8 +41,9 @@ function run (test, maker) {
   test('create-props-listen', async (t) => {
     t.comment('for store type ' + maker.name)
     const db = await maker()
-    const created = db.create({color: 'green'})
-    db.listenSince(0, 'change', (pg, delta) => {
+    //  const created = 
+    db.create({color: 'green'})
+    db.listenSince(0, 'change', async (pg, delta) => {
       // BUG t.equal(pg, created)
       // BUG t.equal(delta.subject, created)
       t.equal(delta.property, 'color')
@@ -105,6 +110,56 @@ function run (test, maker) {
       db.setProperty(created, 'weird_color', 'blue')   // during on-change callback
     })
     db.setProperty(created, 'weird_color', 'green') // normal change-watch
+  })
+
+  test('stable', async (t) => {
+    if (maker.name === 'RawClientImmediateServer' ||   // bug
+        maker.name.match(/NetworkServer/) || // timing issues
+        maker.name.match(/ReadyServer/) // reuse issues
+       ) {        // timing issues
+      t.end()
+      return
+    }
+    t.comment('for store type ' + maker.name)
+    const db = await maker()
+    if (!db.emitsStable) {
+      t.end()
+      return
+    }
+    const events = []
+
+    let obj = db.create({a: 1})
+
+    db.on('stable', async (stableDB, delta) => {
+      t.equal(stableDB, db)
+      const d = Object.assign({}, delta)
+      // these differ with the different makers
+      delete d.subject
+      delete d.oldValue
+      delete d.who
+      delete d.when
+      events.push(d)
+    })
+
+    db.setProperty(obj, 'a', 2)
+    db.setProperty(obj, 'a', 3)
+    await sleep(5)
+    db.setProperty(obj, 'a', 4)
+    db.setProperty(obj, 'a', 5)
+    await sleep(10)  // stable here
+    db.setProperty(obj, 'a', 6)
+    db.setProperty(obj, 'a', 7)
+    await sleep(10) // stable here
+    db.setProperty(obj, 'a', 8)
+    db.setProperty(obj, 'a', 9)
+    await sleep(100) // stable here
+    t.deepEqual(events, [
+      { property: 'a', value: 5, seq: 5 },
+      { property: 'a', value: 7, seq: 7 },
+      { property: 'a', value: 9, seq: 9 }
+    ])
+    await db.close()
+    t.end()
   })
 }
 

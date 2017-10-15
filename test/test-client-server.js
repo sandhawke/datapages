@@ -8,13 +8,7 @@ Also, maybe distinguish LowLevel and HighLevel (Proxy) API
 */
 
 const test = require('tape')
-// const Bridge = require('./bridge').Bridge
 const datapages = require('..')
-// const path = require('path')
-// const util = require('util')
-// const Client = require('../client')
-const MinDB = require('../mindb')
-const Server = require('../server')
 const debug = require('debug')('datapages_test_client_server')
 const fs = require('fs')
 const path = require('path')
@@ -38,12 +32,12 @@ function forEachTransport (t, run, makeDB) {
   t.comment(' ... forEachTransport, in tmp ' + tmp)
 
   if (!makeDB) {
-    makeDB = () => new MinDB()
+    makeDB = () => new datapages.MinDB()
   }
 
   t.test('. with fake (local) transport', async (tt) => {
     const f = new transport.Server()
-    const s = new Server({transport: f, db: makeDB(tmp)})
+    const s = new datapages.Server({transport: f, db: makeDB(tmp)})
     const c = new datapages.RawClient({transport: f.connectedClient()})
     const c2 = new datapages.RawClient({transport: f.connectedClient()})
     const r = new datapages.Remote({transport: f.connectedClient()})
@@ -62,7 +56,7 @@ function forEachTransport (t, run, makeDB) {
     t.test(' . with webgram', async (tt) => {
       const secrets = path.join(tmp, 'server-secrets')
       // console.log('XXX', secrets)
-      const s = new Server({
+      const s = new datapages.Server({
         sessionOptions: { serverSecretsDBName: secrets },
         db: makeDB(tmp)})
       await s.transport.start()

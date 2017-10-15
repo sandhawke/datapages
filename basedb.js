@@ -28,15 +28,36 @@ class DB extends EventEmitter {
     this.debug = debugM(options.debugPrefix ||
                         `datapages_${className}_${nextNum(className)}`)
 
+    if (this.stabilityms === undefined) this.stabilityms = 10
+    
     // we just care about the delta, but some simpler software mostly
     // just wants to be handled the delta.subject, so ... give it that
     // with on('change')
     this.on('delta', delta => {
       this.debug('delta => change %o', delta)
       this.emit('change', delta.subject, delta)
+
+      // It's intentional that we don't start the timer until the
+      // first delta.  Typically we don't want to display zero results
+      // quickly while loading the initial set.  If you want that,
+      // just call your on-stable function at creation time.
+      if (this.listeners('stable').length) {
+        this.debug('someone is listening for on-stable! %O', this.listeners('stable').toString())
+        // I wonder how much this affects performance?  Dunno the
+        // overhead for clearTimeout and setTimeout.
+        if (this.timeout !== undefined) clearTimeout(this.timeout)
+        this.timeout = setTimeout(() => {
+          this.debug('stability timeout running')
+          this.emit('stable', this, delta)
+        }, this.stabilityms)
+        this.debug('set a timeout for %nms', this.stabilityms)
+      }
     })
   }
 
+  get emitsChange () { return true }
+  get emitsStable () { return true }
+  
   close () { }
 
   bridge (other) {
@@ -103,8 +124,12 @@ class DB extends EventEmitter {
   }
 }
 
-DB.prototype[Symbol.iterator] = function * () {
-  yield * this.items()
+/* Not sure why this doesn't work; for now we only need it on View anyway,
+   so it's there, without inheritance 
+
+DB.prototype[Symbol.iterator] = function () {
+  return this.items()
 }
+*/
 
 module.exports = DB

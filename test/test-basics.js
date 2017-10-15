@@ -11,8 +11,10 @@ const makers = [
   MinDB,
   InMem,
   FlatFile,
-  ClientImmediateServer,
-  ClientNetworkServer
+  RawClientImmediateServer,
+  RawClientNetworkServer,
+  RemoteImmediateServer,
+  RemoteNetworkServer
 ]
 
 const tmp = fs.mkdtempSync('/tmp/datapages-test-')
@@ -36,22 +38,30 @@ async function InMem () {
   return new datapages.InMem()
 }
 
-async function ClientImmediateServer () {
+async function RawClientImmediateServer () {
   const f = new transport.Server()
   const s = new datapages.Server({transport: f, db: new datapages.MinDB()})
   s.transport.start()
-  const c = new datapages.RawClient({transport: f.connectedClient()})
+  const c = new datapages.RawClient({transport: f.connectedClient(), skipResume: true})
   return c
 }
 
-async function ClientNetworkServer () {
+async function RemoteImmediateServer () {
+  const f = new transport.Server()
+  const s = new datapages.Server({transport: f, db: new datapages.MinDB()})
+  s.transport.start()
+  const c = new datapages.Remote({transport: f.connectedClient(), skipResume: true})
+  return c
+}
+
+async function RawClientNetworkServer () {
   const s = new datapages.Server({
     sessionOptions: {
       serverSecretsDBName: file('serversecret')
     },
     db: new datapages.MinDB()})
   await s.transport.start()
-  const c = new datapages.RawClient({serverAddress: s.transport.address})
+  const c = new datapages.RawClient({serverAddress: s.transport.address, skipResume: true})
   const close = c.close.bind(c)
   c.close = () => {
     close()
@@ -59,6 +69,31 @@ async function ClientNetworkServer () {
   }
   return c
 }
+
+async function RemoteNetworkServer () {
+  const s = new datapages.Server({
+    sessionOptions: {
+      serverSecretsDBName: file('serversecret')
+    },
+    db: new datapages.MinDB()})
+  await s.transport.start()
+  console.log('connecting to', s.transport.address)
+  const c = new datapages.Remote({serverAddress: s.transport.address, skipResume: true})
+
+  const close = c.close.bind(c)
+  c.close = async () => {
+    try {
+      await close()
+    }
+    catch (err) {
+      console.log('# ignoring client err during close: ', err.message)
+    }
+    await s.close()
+  }
+  console.log('client set up')
+  return c
+}
+
 
 for (const maker of makers) runTests(test, maker)
 

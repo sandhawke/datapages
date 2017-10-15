@@ -77,6 +77,22 @@ test('more complex filter', async (t) => {
   t.end()
 })
 
+test('iteration', (t) => {
+  const db = new datapages.InMem()
+  const events = []
+  const v = db.view({filter: {color: {exists: true}}})
+  const objects = [
+    db.create({color: 'red'}),
+    db.create({color: 'green'}),
+    db.create({color: 'blue'})
+  ]
+  const out = Array.from(v)
+  
+  t.deepEqual(out, objects)
+  db.close()
+  t.end()
+})
+
 // make a static copy, and removed __ properties
 function clean (obj) {
   if (!obj) return obj

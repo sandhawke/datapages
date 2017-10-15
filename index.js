@@ -17,6 +17,10 @@ class Remote extends InMem {
   get sessionData () {
     return this.rawClient.transport.sessionData
   }
+
+  close () {
+    return this.rawClient.close()
+  }
 }
 
 module.exports = { InMem, FlatFile, MinDB, RawClient, Server, Remote }
