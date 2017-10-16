@@ -18,6 +18,14 @@
 //
 // Instead, let "test-in-browser.js" run this via browserify
 
+const test = require('./setup')
+const datapages = require('..')
+
+require('./test-groupby')
+require('./test-listen')
+
+/*
+
 const test = require('tape')
 const datapages = require('..')
 const runTests = require('./basic-tests')
@@ -51,3 +59,4 @@ async function RemoteToReadyServer () {
 }
 
 for (const maker of makers) runTests(test, maker)
+*/

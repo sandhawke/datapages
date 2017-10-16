@@ -6,7 +6,7 @@ const path = require('path')
 // phantomjs isn't working right, it shuts down before sending any output
 const browsers = []
 browsers.push('firefox')
-// browsers.push('chromium')
+browsers.push('chromium')
 // const browsers = null
 
 run('test/run-this-in-browsers', {newServer, browsers})
