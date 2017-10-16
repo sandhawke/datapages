@@ -17,10 +17,15 @@ function sleep (ms) {
   })
 }
 
+// test.skip doesn't work on sub-tests, so do this instead.
+const runOld = true
+const runNew = true
+const runToDo = false
+
 function run (test, maker) {
   debug('running')
 
-  test('create-set-listen', async (t) => {
+  if (runOld) test('create-set-listen', async (t) => {
     t.comment('for store type ' + maker.name)
     const db = await maker()
     const created = db.create()
@@ -38,7 +43,7 @@ function run (test, maker) {
     })
   })
 
-  test('create-props-listen', async (t) => {
+  if (runOld) test('create-props-listen', async (t) => {
     t.comment('for store type ' + maker.name)
     const db = await maker()
     //  const created = 
@@ -54,7 +59,54 @@ function run (test, maker) {
     })
   })
 
-  test('listen-create-set', async (t) => {
+  if (runOld) test('nesting',  async (t) => {
+    const db = await maker()
+    if (db.materialized) {
+      const initial = {a: {b: [{c:5, d:10}, 100, 'hello']}}
+      const c = db.create(initial)
+      // console.log('c is', c)
+      // console.log('c copy is', Object.assign({}, c))
+      // console.log('json', JSON.stringify(c))
+      // const readout = JSON.parse(JSON.stringify(c))
+      const readout = Object.assign({}, c)
+      delete readout.__rawseq
+      // console.log('readout', readout)
+      t.deepEqual(readout, initial)
+    }
+    db.close()
+    t.end()
+  })
+
+  // wrapping!
+  if (runToDo) test('wrapping results', async (t) => {
+    const db = await maker()
+    if (db.materialized) {
+      const initial = {a: {b: 31}}
+      const page = db.create(initial)
+      t.ok(page.a.__target)
+    }
+    db.close()
+    t.end()
+  })
+  
+  if (runOld) test('property path', async (t) => {
+    const db = await maker()
+    if (db.materialized) {
+      const initial = {a: {b: {c:5, d:10}}}
+      const c = db.create(initial)
+      t.equal(c.a, initial.a)
+      t.equal(c['a'], initial.a)
+      t.equal(c.a.b, initial.a.b)
+      t.equal(c['a.b'], initial.a.b)
+      t.equal(c.a.b.c, initial.a.b.c)
+      // TODO       t.equal(c['a.b.c'], initial.a.b.c)
+      // t.equal(c.a['b.c'], initial.a.b.c)
+    }
+    db.close()
+    t.end()
+  })
+
+  if (runOld) test('listen-create-set', async (t) => {
     t.comment('for store type ' + maker.name)
     const db = await maker()
     let created
@@ -71,7 +123,7 @@ function run (test, maker) {
     db.setProperty(created, 'color', 'green')
   })
 
-  test('weird timing on listenSince', async (t) => {
+  if (runOld) test('weird timing on listenSince', async (t) => {
     t.comment('for store type ' + maker.name)
     const db = await maker()
     const events = []
@@ -112,7 +164,7 @@ function run (test, maker) {
     db.setProperty(created, 'weird_color', 'green') // normal change-watch
   })
 
-  test('stable', async (t) => {
+  if (runOld) test('stable', async (t) => {
     if (maker.name === 'RawClientImmediateServer' ||   // bug
         maker.name.match(/NetworkServer/) || // timing issues
         maker.name.match(/ReadyServer/) // reuse issues

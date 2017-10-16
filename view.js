@@ -11,6 +11,15 @@ const BaseDB = require('./basedb')
 // base must make available the current state of its members, it can't just
 // passthrough deltas.    but they don't need to be enumerable...
 
+function scalar (val) {
+  const t = typeof val
+  if (t === 'string' || t === 'number' || t === 'boolean' ||
+      val === null || val === undefined) {
+    return true
+  }
+  return false
+}
+
 class View extends BaseDB {
   constructor (options = {}, base) {
     super()
@@ -22,14 +31,12 @@ class View extends BaseDB {
     }
 
     this.members = new Set()
+    if (this.groupBy) this.groups = new Map()
 
     // NO, determine this for ourselves
     // this.base.on('stable', () => { this.emit('stable') })
 
-    this.base.on('disappear', page => {
-      this.members.delete(page)
-      this.emit('disappear', page)
-    })
+    this.base.on('disappear', (page, delta) => { this._delete(page, delta) })
 
     this.base.on('change', (page, delta) => {
       const [was, is] = this.consider(page, delta)
@@ -39,22 +46,63 @@ class View extends BaseDB {
         this.emit('delta', delta)
       }
     })
-
-    // let this wait, so folks have time to add on-appear handler
-    //
-    // maybe some race conditions here.   :-(
-    //
-    /*
-    process.nextTick(async () => {
-      const endSeq = await this.base.maxSeq()
-      this.base.replaySince(0, 'change', (pg, delta) => {
-        this.consider(pg)
-        if (delta.seq >= endSeq) this.emit('stable')
-      })
-    })
-    */
   }
 
+  _add (page, delta, emit) {
+    this.members.add(page, delta)
+    if (this.groupBy) {
+      const group = this.groupFor(page)
+      let gMembers = this.groups.get(group)
+      if (!gMembers) {
+        gMembers = new Set()
+        this.groups.set(group, gMembers)
+      }
+      gMembers.add(page)
+    }
+    if (emit) this.emit('appear', page, delta)
+  }
+
+  _delete (page, delta) {
+    this.members.delete(page)
+    if (this.groupBy) {
+      const group = this.groupFor(page)
+      const gMembers = this.groups.get(group)
+      gMembers.delete(page)
+    }
+    this.emit('disappear', page, delta)
+  }
+
+  // what is the index value for this page, according to groupBy
+  //
+  groupFor (page) {
+    const by = this.groupBy
+    if (typeof by === 'string') {
+      const result = page[by]
+      if (scalar(result)) return result
+      throw Error ('groupBy only implemented for scalar values')
+    }
+    if (Array.isArray(by)) {
+      const result = []
+      for (const prop of by) {
+        const val = page[prop]
+        if (scalar(val)) {
+          result.push(val)
+        } else {
+          throw Error ('groupBy only implemented for scalar values')
+        }
+      }
+      // hm, we can't just return the array, because Map will map
+      // ['x'] and ['x'] to two different places. So we can jsonify it
+      // into a string. Downside is when someone is traversing
+      // view.groups, the keys are in json form.  Alternatively, we
+      // could keep a map from array values to the original instance
+      // of that array, but that seems like a silly amount of extra
+      // work.  JSON it is.
+      return JSON.stringify(result)
+    }
+    throw Error ('if defined, groupBy must be string or array of strings')
+  }
+  
   async maxSeq () {
     return this.base.maxSeqUsed
   }
@@ -69,14 +117,12 @@ class View extends BaseDB {
         debug('... it still belongs')
       } else {
         debug('... it no longer belongs, disappear')
-        this.members.delete(page)
-        this.emit('disappear', page, delta)
+        this._delete(page, delta)
       }
     } else {
       if (passes) {
         debug('... it now belongs, appear')
-        this.members.add(page)
-        this.emit('appear', page, delta)
+        this._add(page, delta, true)
       } else {
         debug('... it still does not belong')
       }
@@ -85,7 +131,7 @@ class View extends BaseDB {
   }
 
   eventreconsider (page) {
-    debug('considering %o', page)
+    debug('reconsidering %o', page)
     const passes = this.passes(page)
     let wasIn = false
     if (this.members.has(page)) {
@@ -100,7 +146,7 @@ class View extends BaseDB {
     } else {
       if (passes) {
         debug('... it now belongs, appear')
-        this.members.add(page)
+        this._add(page, null, false)
         return 'appear'
       } else {
         debug('... it still does not belong')

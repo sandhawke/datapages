@@ -32,12 +32,13 @@ class Client extends BaseDB {
   }
 
   close () {
-    /*  turns out not to be needed, as close() rejects at this point
-    this.transport.onError = (err) => {
-      console.log('# ignoring client err after close: ', err)
+    // maybe: this.transport.onError = (err) => 
+    // Nope, it's a reject :
+    try {
+      this.transport.close()
+    } catch (err) {
+      console.log('# ignoring client err in close(): ', err.message)
     }
-    */
-    this.transport.close()
   }
 
   createBlank () {

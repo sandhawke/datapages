@@ -7,7 +7,7 @@
 
 const EventEmitter = require('eventemitter3')
 const Bridge = require('./bridge')
-// const View = require('./view')
+const refs = require('./refs')
 const debugM = require('debug')
 
 // make ourselves some find debugging labels, so this.debug tells us
@@ -28,6 +28,9 @@ class DB extends EventEmitter {
     this.debug = debugM(options.debugPrefix ||
                         `datapages_${className}_${nextNum(className)}`)
 
+    this.refs = refs(this.create.bind(this),
+                     this.overlay.bind(this))
+    
     if (this.stabilityms === undefined) this.stabilityms = 10
     
     // we just care about the delta, but some simpler software mostly
@@ -78,6 +81,8 @@ class DB extends EventEmitter {
     // we don't want { who: undefined } cluttering up our test cases, etc
     if (who !== undefined) delta.who = who
     if (when !== undefined) delta.when = when
+
+    delta.value = this.shred(delta.value)
     this.applyDelta(delta)
   }
 
@@ -134,6 +139,10 @@ class DB extends EventEmitter {
     }
     buf = false // flag to stop buffering
     this.emit('stable')
+  }
+
+  shred (value) {
+    return this.refs.to(value)
   }
 }
 

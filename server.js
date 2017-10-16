@@ -35,7 +35,7 @@ class Server {
       // it.
       options.sessionOptions.dispenseSessionID = async () => {
         const id = this.db.create()
-        console.log('dispensing session id', id)
+        this.debug('dispensing session id', id)
         if (this.doOwners) {
           this.db.setProperty(id, '_owner', id, this.systemID, new Date())
           this.db.setProperty(id, '_isSession', true, this.systemID, new Date())
@@ -100,7 +100,7 @@ class Server {
       this.debug('no sid for this yet')
 
       sid = this.db.create()
-      console.log('dispensing OBJECT id', sid)
+      this.debug('dispensing OBJECT id', sid)
       if (this.doOwners) {
         this.db.setProperty(sid, '_owner', conn.sessionData._sessionID,
                             this.systemID, new Date())

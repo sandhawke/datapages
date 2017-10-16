@@ -7,7 +7,7 @@ const path = require('path')
 const transport = require('./fake-transport')
 const runTests = require('./basic-tests')
 
-const makers = [
+let makers = [
   MinDB,
   InMem,
   FlatFile,
@@ -16,6 +16,15 @@ const makers = [
   RemoteImmediateServer,
   RemoteNetworkServer
 ]
+
+const arg = process.env.MAKERS
+if (arg) {
+  console.log('# filtering using MAKERS =', arg)
+  makers = makers.filter(x => {
+    return x.name.toLowerCase().match(arg.toLowerCase())
+  })
+  console.log('# MAKERS restricted to ' + makers.map(x => x.name))
+}
 
 const tmp = fs.mkdtempSync('/tmp/datapages-test-')
 let count = 0
@@ -77,7 +86,7 @@ async function RemoteNetworkServer () {
     },
     db: new datapages.MinDB()})
   await s.transport.start()
-  console.log('connecting to', s.transport.address)
+  console.log('# connecting to', s.transport.address)
   const c = new datapages.Remote({serverAddress: s.transport.address, skipResume: true})
 
   const close = c.close.bind(c)

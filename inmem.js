@@ -28,14 +28,21 @@ class InMem extends BaseDB {
     // this.nextID = -1
     this.deltas = []
     // this.rawpages = new Map()   // by id
-    // this.proxies = new Map() // by id
-    // this.views = {}
+    // this.proxies = new Map() // by target  vs .__proxy ?
     this.ee = Symbol('myEventEmitter')
     this.maxSeqUsed = 0
+
+    this.handler = {
+      get: this.proxyHandlerForGet.bind(this),
+      set: this.proxyHandlerForSet.bind(this),
+      ownKeys : this.proxyHandlerForOwnKeys.bind(this)
+    }
 
     this.debug('constructed')
   }
 
+  get materialized () { return true }
+  
   async maxSeq () {
     return this.maxSeqUsed
   }
@@ -85,12 +92,6 @@ class InMem extends BaseDB {
     return synchronously.
    */
   create (overlay) {
-    if (!this.handler) {
-      this.handler = {
-        get: this.proxyHandlerForGet.bind(this),
-        set: this.proxyHandlerForSet.bind(this)
-      }
-    }
     const rawpage = { __rawseq: ++this.objCount }
     // this.debug('rawpage 1 %o', rawpage)
     const proxy = new Proxy(rawpage, this.handler)
@@ -121,8 +122,13 @@ class InMem extends BaseDB {
     }
   }
 
+  proxyHandlerForOwnKeys (target) {
+    return Reflect.ownKeys(target)
+  }
+  
   proxyHandlerForGet (target, name, receiver) {
-    // this.debug('GET NAME', name)
+    // these are too noisy usually, given that debug() will call this often
+    // this.debug('proxyHandlerForGet(..., %j, ...)', name)
     // this.debug('handling GET %j on data %o', name, target)
 
     // nah, let people still read it, eg during 'disappear' handling
@@ -141,9 +147,37 @@ class InMem extends BaseDB {
       // which we only create when it's first used
       const ee = setdefault.lazy(target, this.ee, () => new EventEmitter())
       return ee[name].bind(ee)
-    } else {
-      return target[name]
     }
+
+    const wrap = (target) => {
+      // make a new proxy around this target, ...
+      //
+      // OR MAYBE RETURN AN EXISTING ONE IF WE HAVE ONE?
+      // so that when we get a value via various paths, it'll
+      // still be === ?
+      if (typeof target !== 'object') return target
+      if (target === null) return target
+      if (Array.isArray(target)) return target
+      return new Proxy(target, this.handler)
+    }
+
+    if (typeof name === 'string') {
+      const path = name.match(/([^.]*)\.(.+)/)
+      if (path) {
+        const head = path[1] // everything before first dot
+        const rest = path[2] // everything after first dot
+        this.debug('property path found, using %j . %j',  head, rest)
+        const next = this.refs.from(target[head])
+        this.debug(' .. next is %o', next)
+        const nextWrapped = next // wrap(next)
+        this.debug(' .. wrapped is %o', next)
+        const result = nextWrapped[rest]
+        this.debug(' .. and result %o', result)
+        return result
+      }
+    }
+    
+    return this.refs.from(target[name]) // should wrap, really
   }
 
   emit (name, ...args) {

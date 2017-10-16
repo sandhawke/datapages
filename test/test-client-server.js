@@ -20,7 +20,7 @@ mockDate.set('2/1/1988', 120)
 const fakeNow = new Date()
 debug('date mocked to', fakeNow)
 
-const doWebgram = false
+const doWebgram = true
 
 function sleep (ms) {
   return new Promise((resolve) => {

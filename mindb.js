@@ -53,7 +53,9 @@ class MinDB extends BaseDB {
   applyDelta (delta) {
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
     this.deltas.add(delta)
+    this.debug('emiting %d delta %o', delta.seq, delta)
     this.emit('delta', delta)
+    this.debug('emit done %d', delta.seq)
   }
 }
 
