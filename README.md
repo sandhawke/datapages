@@ -35,5 +35,5 @@ dogs.on('appear', dog => {
 })
 ```
 
-See [API Documentation](api.html) and [API Ideas](api-ideas.html)
+See [API Documentation](https://sandhawke/github.io/datapages/api.html)
 
