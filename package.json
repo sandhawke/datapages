@@ -1,10 +1,11 @@
 {
   "name": "datapages",
-  "version": "0.6.5",
-  "description": "very simple synchronizing document-style database",
+  "version": "0.8.0",
+  "description": "small, fast, and powerful synchronizing json-style database",
   "main": "index.js",
   "scripts": {
-    "test": "standard && tap --cov test*.js test/test*.js",
+    "test": "asciidoctor *.adoc && standard && tap --cov test*.js test/test*.js",
+    "docs": "asciidoctor *.adoc",
     "coverage": "standard && tap --cov test*.js --coverage-report=lcov",
     "watch": "watchify client.js -o static/bundle.js -v",
     "release": "npm version patch && git push --follow-tags && npm publish"

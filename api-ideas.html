@@ -5,7 +5,7 @@
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.4">
-<title>Datapages&#8201;&#8212;&#8201;synchronizing json-style data</title>
+<title>Older API Bits, mostly interesting ideas</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
@@ -419,562 +419,434 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article">
 <div id="header">
-<h1>Datapages&#8201;&#8212;&#8201;synchronizing json-style data</h1>
+<h1>Older API Bits, mostly interesting ideas</h1>
 <div id="toc" class="toc">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#_design_concepts">1. Design Concepts</a>
+<li><a href="#_">1. &#8230;&#8203;</a>
 <ul class="sectlevel2">
-<li><a href="#_pages">1.1. Pages</a></li>
-<li><a href="#_views">1.2. Views</a></li>
-<li><a href="#_advanced_topics">1.3. Advanced Topics</a>
+<li><a href="#__idea_event_update">1.1. [IDEA] Event: update-*</a></li>
+<li><a href="#_db_count">1.2. db.count()</a></li>
+<li><a href="#_db_lookup_itemref_property_or_itemref_filter_expr">1.3. db.lookup(itemref, property) or (itemref, filter-expr)</a></li>
+<li><a href="#__idea_db_select_arrayofpropertynames_aka_db_project">1.4. [IDEA] db.select(arrayOfPropertyNames)   aka db.project(&#8230;&#8203;)</a></li>
+<li><a href="#__idea_db_join_n">1.5. [IDEA] db.join(n)</a></li>
+</ul>
+</li>
+<li><a href="#_media_pages">2. Media Pages</a></li>
+<li><a href="#_vocabulary">3. Vocabulary</a></li>
+<li><a href="#_instance_types">4. Instance Types</a>
+<ul class="sectlevel2">
+<li><a href="#_filestore_on_disk_each_page_is_its_own_file">4.1. Filestore: on disk, each page is its own file</a></li>
+<li><a href="#__planned_cache_wrapper_which_caches_some_all_of_the_underlying_db">4.2. [PLANNED] Cache: wrapper which caches some/all of the underlying db</a></li>
+<li><a href="#__planned_multisource_wrapper_for_1_write_n_read_dbs_appearing_as_one_db">4.3. [PLANNED] Multisource: wrapper for 1-write N-read dbs, appearing as one db</a>
 <ul class="sectlevel3">
-<li><a href="#_deltas">1.3.1. Deltas</a></li>
-<li><a href="#_semantics">1.3.2. Semantics</a></li>
+<li><a href="#_db_include">4.3.1. db.include()</a></li>
 </ul>
 </li>
+<li><a href="#__idea_accesscontrolled_gives_a_partial_view_of_a_db_based_on_user_attributes">4.4. [IDEA] Accesscontrolled: gives a partial view of a db based on 'user' attributes</a></li>
+<li><a href="#__idea_rulebase_computes_virtual_properties_virtual_pages_and_checks_validity">4.5. [IDEA] Rulebase: computes virtual properties, virtual pages, and checks validity</a></li>
+<li><a href="#__idea_equalityreasoner">4.6. [IDEA] EqualityReasoner</a>
+<ul class="sectlevel3">
+<li><a href="#_db_addkey_prop">4.6.1. db.addKey (prop)</a></li>
+<li><a href="#_db_issamesubjectas_a_b">4.6.2. db.isSameSubjectAs (a, b)</a></li>
+<li><a href="#_db_makesamesubjectas_a_b">4.6.3. db.makeSameSubjectAs (a, b)</a></li>
+<li><a href="#_db_issamepageas_a_b">4.6.4. db.isSamePageAs (a, b)</a></li>
+<li><a href="#_db_makesamesubjectas_a_b_2">4.6.5. db.makeSameSubjectAs (a, b)</a></li>
+<li><a href="#_db_refmod_property_type">4.6.6. db.refmod(property, type)</a></li>
 </ul>
 </li>
-<li><a href="#_standard_methods_on_a_db_database_view">2. Standard methods on a db (database view)</a>
-<ul class="sectlevel2">
-<li><a href="#_db_create_obj">2.1. db.create(obj)</a></li>
-<li><a href="#_db_setproperty_subject_property_value_who_when_why">2.2. db.setProperty(subject, property, value, who, when, why)</a></li>
-<li><a href="#_subj_prop_val_proxy">2.3. subj.prop = val    [proxy]</a></li>
-<li><a href="#_db_overlay_page_overlay">2.4. db.overlay(page, overlay)</a></li>
-<li><a href="#_db_delete_page">2.5. db.delete(page)</a></li>
-<li><a href="#_db_getproperty_page_prop_proxy">2.6. db.getProperty(page, prop) [proxy]</a></li>
-<li><a href="#_page_prop_proxy">2.7. page.prop [proxy]</a></li>
-<li><a href="#_db_waitforproperty_page_prop_timeout_proxy">2.8. db.waitForProperty(page, prop, timeout)  [proxy]</a></li>
-<li><a href="#_db_on_db_off_db_once">2.9. db.on / db.off / db.once</a></li>
-<li><a href="#_db_replaysince_seq_event_cb">2.10. db.replaySince(seq, event, cb)</a></li>
-<li><a href="#_db_listensince_seq_event_cb">2.11. db.listenSince(seq, event, cb)</a></li>
-<li><a href="#_db_view_viewoptions">2.12. db.view(viewOptions)</a></li>
-<li><a href="#_db_bridge_otherdb">2.13. db.bridge(otherDB)</a></li>
-<li><a href="#_db_close">2.14. db.close()</a></li>
+<li><a href="#__idea_vocabularymapped_view">4.7. [IDEA] vocabularyMapped view</a></li>
 </ul>
 </li>
-<li><a href="#_database_classes">3. Database Classes</a>
-<ul class="sectlevel2">
-<li><a href="#_datapages_inmem">3.1. datapages.InMem()</a></li>
-<li><a href="#__todo_datapages_pg_pg">3.2. [TODO] datapages-pg.PG</a></li>
-<li><a href="#_datapages_mindb">3.3. datapages.MinDB()</a></li>
-<li><a href="#_datapages_flatfile_filename">3.4. datapages.FlatFile(filename)</a></li>
-<li><a href="#_datapages_remote">3.5. datapages.Remote</a></li>
-<li><a href="#_datapages_rawclient">3.6. datapages.RawClient</a></li>
-</ul>
-</li>
-<li><a href="#_views_2">4. Views</a>
-<ul class="sectlevel2">
-<li><a href="#_name">4.1. name</a></li>
-<li><a href="#_filter">4.2. filter</a></li>
-<li><a href="#_groupby">4.3. groupBy</a></li>
-<li><a href="#__todo_sortby">4.4. [TODO] sortBy</a></li>
-<li><a href="#__todo_limit">4.5. [TODO] limit</a></li>
-<li><a href="#__todo_deltafilter">4.6. [TODO] deltaFilter</a></li>
-</ul>
-</li>
-<li><a href="#_events">5. Events</a>
-<ul class="sectlevel2">
-<li><a href="#_event_appear">5.1. Event: appear</a></li>
-<li><a href="#_event_disappear">5.2. Event: disappear</a></li>
-<li><a href="#_event_stable">5.3. Event: stable</a></li>
-<li><a href="#_event_change">5.4. Event: change</a></li>
-<li><a href="#_event_delta">5.5. Event: delta</a></li>
-<li><a href="#__todo_event_error">5.6. [TODO] Event: error</a></li>
-<li><a href="#__todo_event_results">5.7. [TODO] Event: results</a></li>
-<li><a href="#__todo_event_progress">5.8. [TODO] Event: progress</a></li>
-</ul>
-</li>
-<li><a href="#_merge">6. Merge</a></li>
 </ul>
 </div>
 </div>
 <div id="content">
-<div id="preamble">
+<div class="sect1">
+<h2 id="_">1. &#8230;&#8203;</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="__idea_event_update">1.1. [IDEA] Event: update-*</h3>
+<div class="paragraph">
+<p>'update-before' is called with (page, overlay), where the overlay is
+relative to some previous state that the receiver might not have, and
+a reference object, such as one would pass as the first argument on
+update.  For some situations, like event is sufficient.  Might be
+called when the overlay actually changes no data, unlike the other
+update-* events.</p>
+</div>
+<div class="paragraph">
+<p>'update-full' is called with (before, after, overlay).  This is
+somewhat more expensive to create, so if update-light is good enough,
+use that.</p>
+</div>
+<div class="paragraph">
+<p>'update-after' is called with (ref, overlay), where the overlay has
+been applied</p>
+</div>
+<div class="paragraph">
+<p>'update-property is called with (property, value-before, value-after,
+ref).  If you only care about one property, you can hook into this and
+quickly check if the property is the one you want.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_db_count">1.2. db.count()</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_db_lookup_itemref_property_or_itemref_filter_expr">1.3. db.lookup(itemref, property) or (itemref, filter-expr)</h3>
+<div class="paragraph">
+<p>a shortcut for a filter that selects that one item, and optionally
+produces that one property of the item, or the item only when it
+matches that filter.  Often followed by .once('results', &#8230;&#8203;) to see
+the value if/when it appears, or .on('results', &#8230;&#8203;) to also see when
+it changes.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="__idea_db_select_arrayofpropertynames_aka_db_project">1.4. [IDEA] db.select(arrayOfPropertyNames)   aka db.project(&#8230;&#8203;)</h3>
+<div class="paragraph">
+<p>A performance hint, telling the underlying system that it&#8217;s safe to
+ignore all properties not in the given list.  That is, it returns a
+dbview where no effort is made to report the values of properties not
+in this list.  Could be read as "properties I care about".</p>
+</div>
+<div class="paragraph">
+<p>If your on-appear listener only looks at three properties, then it&#8217;s good to put a .select() for those three properties before the .on(), so no effort is made to transport and even compute the values for those properties.</p>
+</div>
+<div class="paragraph">
+<p>The default is all defined properties, as per vocabspec.</p>
+</div>
+<div class="paragraph">
+<p>Behavior is undefined if you update or create with properties not in
+the select list.</p>
+</div>
+<div class="paragraph">
+<p>Note that SELECT A WHERE B="FOO" has to be done like:</p>
+</div>
+<div class="paragraph">
+<p>db.where({b: 'foo'}).select('a')</p>
+</div>
+<div class="paragraph">
+<p>NOT db.select('a').where({b: 'foo'}) because .where can&#8217;t even see b,
+because it wasn&#8217;t passed through by .select('a')</p>
+</div>
+<div class="paragraph">
+<p>call it db.produce ?</p>
+</div>
+<div class="paragraph">
+<p>Make it part of the filter options, not really part of db.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="__idea_db_join_n">1.5. [IDEA] db.join(n)</h3>
+<div class="paragraph">
+<p>Returns a read-only dbview containing n-tuples where each position has each element in db.</p>
+</div>
+<div class="paragraph">
+<p>For example, if db contains {a:1} and {a:2}:</p>
+</div>
+<div class="paragraph">
+<p>then db.join(2) is
+       {1:{a:1}, 2:{a:1}}
+       {1:{a:1}, 2:{a:2}}
+       {1:{a:2}, 2:{a:1}}
+       {1:{a:2}, 2:{a:2}}</p>
+</div>
+<div class="paragraph">
+<p>db.join(3) is</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>{1:{a:1}, 2:{a:1}, 3:{a:1}}
+{1:{a:1}, 2:{a:1}, 3:{a:2}}
+...
+{1:{a:2}, 2:{a:2}, 3:{a:2}}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This allows relational database joins to be expressed within the
+datapages formalism.  Actually traversing the results of a join is not
+recommended and might not be supported (an n-way join of a datapage
+with k pages will have k^n pages).  Instead, the join should be
+followed immediately by a .where, which can implement a more efficient
+search.</p>
+</div>
+<div class="paragraph">
+<p>For example, in SQL given tables LIKES (person, food) and FOODFROM (food, origin), the query SELECT person, origin WHERE LIKES.food = FOODFROM.food would be</p>
+</div>
+<div class="paragraph">
+<p>db.join(2)
+  .where({'1.isLIKE': true,
+          '2.isFOODFROM': true,
+          '1.food': {$valueOfProperty: '2.food'}})
+  .select(['1.person', '2.origin'])</p>
+</div>
+<div class="paragraph">
+<p>(Consider making it .joinWhere(n, filterexpr, renames) to avoid issues.)</p>
+</div>
+<div class="paragraph">
+<p>This can probably be done more cleanly as a virtual page rule:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.addVirtualPageRule({likes: 'person, food',
+                       foodfrom: 'food, origin'},
+                      'person, origin',
+                       (likes, foodfrom)</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.addVirtualPageRule('person, likesFoodFrom', 'person, food', 'food, origin',
+                      (likes, foodfrom) =&gt; {
+                         if (likes.food === foodfrom.food) {
+                            return {person: likes.person,
+                                    likesFoodFrom: foodfrom.origin}
+                         }
+                      }</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It&#8217;d be nice to have better filter exprs, like <code>{ food: {$wanted: true}, origin: {$exists: true} }</code></p>
+</div>
+<div class="paragraph">
+<p>We could do forward chaining just running that blindly, but for
+backward chaining we&#8217;d want a lot more.   Maybe</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.$exists = {$exists: true} // etc
+db.addVirtualPageRule({person: db.$exists, likesFoodFrom: db.$exists},
+                      [{person: db.$exists,
+                        food: db.$exists},
+                       {food: {$eq: {$valueOfProperty: '0.food'}},
+                        ...</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>OR just a simple statement of === join fields.  Other relations are
+less useful for optimizing.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.join(['food', 'food']) ....   that doesn't quite work, I expect.</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_media_pages">2. Media Pages</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><em>Everything should be made as simple as possible, but not simpler</em>&#8201;&#8212;&#8201;<a href="http://quoteinvestigator.com/2011/05/13/einstein-simple/">Einstein</a></p>
+<p>Some datapages have an attached digital media instance, such as a jpeg
+image or an mp3 audio sample.  This attachment is handled efficiently
+as a "blob", not part of the datapage itself.</p>
 </div>
 <div class="paragraph">
-<p>Features:</p>
+<p>Every media page has a mediaType property, which has the normal IANA
+media type information, like 'image/jpeg'.  (Encoding&#8230;&#8203;?)</p>
 </div>
+<div class="paragraph">
+<p>The media instance data itself can be accessed via a streaming API:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.mediaReadStrean(page, options) returns a readable stream</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>db.mediaWriteStream(page, mediaType, options) returns a writable stream</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When end() is called on the writable stream , the mediaType will be
+set and db.mediaReadStream will work.</p>
+</div>
+<div class="paragraph">
+<p>Concurrency during writes is not allowed: betwen the time
+mediaWriteStream is called and the stream&#8217;s end() function is called,
+other calls to either of these functions will return null.  In theory
+we should track the open read streams as well.  Also, in theory, we
+could just pause the non-winning readers and writers, rather than
+returning null.   Tricky.</p>
+</div>
+<div class="paragraph">
+<p>(When there&#8217;s an attached webserver, .mediaURL should also be set)</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_vocabulary">3. Vocabulary</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Every dbview has a .vocab which is a [vocabspec](<a href="https://github.com/sandhawke/vocabspec" class="bare">https://github.com/sandhawke/vocabspec</a>) instance.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_instance_types">4. Instance Types</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Various useful classes, nearly all of which implement approx the same
+dbview interface, in roughly increasing order of complexity:</p>
+</div>
+<div class="sect2">
+<h3 id="_filestore_on_disk_each_page_is_its_own_file">4.1. Filestore: on disk, each page is its own file</h3>
+
+</div>
+<div class="sect2">
+<h3 id="__planned_cache_wrapper_which_caches_some_all_of_the_underlying_db">4.2. [PLANNED] Cache: wrapper which caches some/all of the underlying db</h3>
+
+</div>
+<div class="sect2">
+<h3 id="__planned_multisource_wrapper_for_1_write_n_read_dbs_appearing_as_one_db">4.3. [PLANNED] Multisource: wrapper for 1-write N-read dbs, appearing as one db</h3>
+<div class="paragraph">
+<p>Wraps a db, also implementing .attach(dbN) for including other
+read-only dbs.  Queries query them as well and merge the results.</p>
+</div>
+<div class="paragraph">
+<p>Writes just go back to primary db.</p>
+</div>
+<div class="paragraph">
+<p>BUT, depending on our delta model, etc, writes might APPEAR to
+change the data, by blocking data from other sources.  That part&#8217;s
+not quite there yet.</p>
+</div>
+<div class="sect3">
+<h4 id="_db_include">4.3.1. db.include()</h4>
+
+</div>
+</div>
+<div class="sect2">
+<h3 id="__idea_accesscontrolled_gives_a_partial_view_of_a_db_based_on_user_attributes">4.4. [IDEA] Accesscontrolled: gives a partial view of a db based on 'user' attributes</h3>
 <div class="ulist">
 <ul>
 <li>
-<p>Very fast for small datasets (thousands of records)</p>
-</li>
-<li>
-<p>Data records are JSON-compatible JavaScript objects</p>
-</li>
-<li>
-<p>Objects can refer to each other naturally (like <code>alice.mother.mother.age</code>, cycles are okay)</p>
-</li>
-<li>
-<p>Instances can be linked into a federation (eg between web client and web server), with efficient propagation</p>
-</li>
-<li>
-<p>Easy to build live displays of dynamically-changing query results (no
-polling)</p>
-</li>
-<li>
-<p>Change (delta) log is available for displaying history and provenance</p>
-</li>
-<li>
-<p>(TODO) Supports temporal and provenance features (only show data resulting from sources a and b before time t)</p>
-</li>
-<li>
-<p>(TODO) Supports transient records, aka event streaming</p>
-</li>
-<li>
-<p>(TODO) Supports access control for use in multiuser backends</p>
-</li>
-<li>
-<p>(TODO) Works with <a href="https://github.com/sandhawke/vocabspec">vocabspec</a> or <a href="https://github.com/sandhawke/data-sentence">data sentence</a>
-to handle
-schema validation, migration (with views), and integration</p>
-</li>
-<li>
-<p>(TODO) Supports streaming attached media blobs, eg JPEGs</p>
+<p>parameterized by uid and a trusted authinfo db</p>
 </li>
 </ul>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="_design_concepts">1. Design Concepts</h2>
-<div class="sectionbody">
 <div class="sect2">
-<h3 id="_pages">1.1. Pages</h3>
+<h3 id="__idea_rulebase_computes_virtual_properties_virtual_pages_and_checks_validity">4.5. [IDEA] Rulebase: computes virtual properties, virtual pages, and checks validity</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>with accessControled allows sophisticated rules</p>
+</li>
+<li>
+<p>probably needs a way to run safe JS functions</p>
+</li>
+</ul>
+</div>
 <div class="paragraph">
-<p>We imagine a world full of "pages" of data, where each page is a
-collection of properties with values, as might be serialized in JSON.
-Pages are somewhat like documents in CouchDB or MongoDB, or rows in
-a database table, or structs in C, or JSON Web Resources (which is
-where the name comes from).  The values of properties may
-be numbers, strings, booleans, timestamps, references to other pages,
-or arrays of any of these.  We can create a page like this:</p>
+<p>start with backchainsubproperty and forwardchainsubproperty
+then bcdatalog and fcdatalog
+then bcHorn, probably</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="__idea_equalityreasoner">4.6. [IDEA] EqualityReasoner</h3>
+<div class="paragraph">
+<p>Gives a view of the data where some obj&#8217;s are "about" the same
+thing, and so the data from one carries over to the other.  For
+example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-javascript" data-lang="javascript">db.create({
-  isDog: true,
-  name: 'Fluffy',
-  owner: { name: 'Hagrid' },
-  heads: 3,  // and yet still, they call it a dog!
-  born: new Date('July 15, 1976'), // not in canon
-  weaknesses: [ { description: 'music induces sleep' } ]
+<pre class="highlightjs highlight"><code class="language-js" data-lang="js">db.add({ name: "Alice", age: 30 })
+db.add({ name: "Alice", hairColor: "dark" })
+db.addKey('name')
+db.forEach(x =&gt; {
+    // x = { name: 'Alice', age:30, hairColor: 'dark' }
 })</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In that example, there are two nested objects, one about Hagrid and
-one about the weakness of having music induce sleep.  Each of these is
-a first class object, so this create() call will actually create three
-objects, with the Fluffy page having references to the other two. In
-practice, we would probably want to fill them in with more details
-about Hagrid to be clear who we are talking about, or use a reference
-to an existing page about Hagrid.</p>
+<p>uhhhhh.   Can&#8217;t really be done with current API</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_views">1.2. Views</h3>
 <div class="paragraph">
-<p>An API user interacts with the world of pages by creating one or more
-"views".  Within a given view, only a subset of the possible pages
-will appear.  Views are somewhat similar to queries in general, but
-more like SQL views, in that they are long lasting: as pages change,
-the view changes.  They are a bit like collections in MongoDB, except
-that a page can appear in many views or no views, depending how the
-specific views are defined.  We can create a view like this:</p>
+<p>Except, if N pages can be merged, the db creates a new page, and
+db.mergedInto(p1, pmergerd)
+db.mergedInto(p2, pmergerd)</p>
+</div>
+<div class="paragraph">
+<p>BUT that would still show through p1 and p2</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-javascript" data-lang="javascript">const dogs = db.view({
-  filter: {
-    isDog: true,
-    name: {required: true},
-    breed: {required: true}
-  }
-})</code></pre>
+<pre class="highlightjs highlight"><code class="language-js" data-lang="js">db.filter({__smooshedIfPossible: true}).forEach( ... )
+
+db.on('replace', ... )   or 'merge'N
+...  p1 and p2 go away, and you get a new one?</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This view will gather and make available pages which have an isDog
-property with the value true and which have name and breed properties
-defined and non-null.  When working with a view like this, one can
-trust that these conditions will be met, with name and breed
-properties available in memory.</p>
+<p>THIS SEEMS OBSCURE, but actually, it&#8217;s essential to making
+decentralization work!</p>
 </div>
 <div class="paragraph">
-<p>We consider the world to be in a state of flux, with pages changing in
-various places, and those changes propagating, both within the
-application process, and across an unreliable network.  When you
-create a view, it starts empty but begins to be filled by matching
-pages. Some of that filling will happen immediately, using data
-already in memory, but it may proceed with data coming in over the
-network or from storage devices.  There is (usually) no distinction
-between new pages appearing in the view because a disk read completed
-and because a user clicked and changed a value.</p>
+<p>Do we need to change dbview?</p>
 </div>
 <div class="paragraph">
-<p>Given this state of flux, much of the API is based around events, so
-code like this is common:</p>
+<p>? can you compare with ===</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-javascript" data-lang="javascript">dogs.on('appear', dog =&gt; {
-  console.log('Found a dog: ', dog.name, 'an', dog.breed)
-  dog.on('change', (page, delta) =&gt; {
-    console.log('  change: ', dog.name, delta.property, '=', delta.value)
-  })
-})
-dogs.on('disappear', dog =&gt; {
-  console.log('Dog gone! ', dog.name, 'an', dog.breed)
-})</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_advanced_topics">1.3. Advanced Topics</h3>
-<div class="sect3">
-<h4 id="_deltas">1.3.1. Deltas</h4>
 <div class="paragraph">
-<p>TBD</p>
-</div>
+<p>I think so, because of pointers / graphs</p>
 </div>
 <div class="sect3">
-<h4 id="_semantics">1.3.2. Semantics</h4>
+<h4 id="_db_addkey_prop">4.6.1. db.addKey (prop)</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_db_issamesubjectas_a_b">4.6.2. db.isSameSubjectAs (a, b)</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_db_makesamesubjectas_a_b">4.6.3. db.makeSameSubjectAs (a, b)</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_db_issamepageas_a_b">4.6.4. db.isSamePageAs (a, b)</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_db_makesamesubjectas_a_b_2">4.6.5. db.makeSameSubjectAs (a, b)</h4>
+
+</div>
+<div class="sect3">
+<h4 id="_db_refmod_property_type">4.6.6. db.refmod(property, type)</h4>
 <div class="paragraph">
-<p>mostly TBD</p>
-</div>
-<div class="paragraph">
-<p>We consider each page to be expressing some knowledge about a
-particular conceptual entity, its "subject", and some places in the
-API we call the page "subject".</p>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_standard_methods_on_a_db_database_view">2. Standard methods on a db (database view)</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The 'ondurable' argument is always optional and is mostly useful for
-UI operations, giving the user feedback that it&#8217;s completed.  We could
-use promises.   (Is that efficient when it&#8217;s usually ignored?)</p>
-</div>
-<div class="sect2">
-<h3 id="_db_create_obj">2.1. db.create(obj)</h3>
-<div class="paragraph">
-<p>Creates a new page in db.  Immediately returns a handle for that page.</p>
+<p>Set the "reference mode" for given property to be given type, which is one of: page, subject, &#8230;&#8203;</p>
 </div>
 <div class="paragraph">
-<p>Providing an object is shorthand for create + overlay, but you don&#8217;t
-get the promise returned by overlay.</p>
+<p>Needs to be known for every property&#8230;&#8203;.    Do we default to 'subject' unless you say 'page'</p>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_db_setproperty_subject_property_value_who_when_why">2.2. db.setProperty(subject, property, value, who, when, why)</h3>
+<h3 id="__idea_vocabularymapped_view">4.7. [IDEA] vocabularyMapped view</h3>
 <div class="paragraph">
-<p>Sets the given property of the given subject page to have the given value.</p>
-</div>
-<div class="paragraph">
-<p>Args who, when, and why are optional and rarely used.  See Deltas for
-details of their use.</p>
+<p>basically run vocabspec convert on all data going in or out</p>
 </div>
 <div class="paragraph">
-<p>Returns a promise (safe to ignore) which resolves when the change has
-become durable.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_subj_prop_val_proxy">2.3. subj.prop = val    [proxy]</h3>
-<div class="paragraph">
-<p>Shorthand for <code>db.setProperty(subj, prop, val)</code></p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_overlay_page_overlay">2.4. db.overlay(page, overlay)</h3>
-<div class="paragraph">
-<p>Call setProperty(page, property, value) for each key-value pair in overlay</p>
+<p>easy to test inmem</p>
 </div>
 <div class="paragraph">
-<p>Returns a promise (safe to ignore) which resolves when the change has
-become durable.</p>
+<p>might be used by rule engine to recognize its own vocabulary without
+conflicting with anyone elses.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_db_delete_page">2.5. db.delete(page)</h3>
-<div class="paragraph">
-<p>Mark the page as deleted.  It will 'disappear' as appropriate.  This
-is just another change, though, and subject to the usual delta
-management.  Actually implemented as setProperty(page, '_deleted',
-true).</p>
-</div>
-<div class="paragraph">
-<p>Return a promise (safe to ignore) which resolves whe the change has
-become durable.</p>
-</div>
-<div class="paragraph">
-<p>ISSUE: can you undelete?</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_getproperty_page_prop_proxy">2.6. db.getProperty(page, prop) [proxy]</h3>
-<div class="paragraph">
-<p>Returns the value, if immediately available, otherwise <code>undefined</code></p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_page_prop_proxy">2.7. page.prop [proxy]</h3>
-<div class="paragraph">
-<p>Shorthand for <code>db.getProperty(page, prop)</code></p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_waitforproperty_page_prop_timeout_proxy">2.8. db.waitForProperty(page, prop, timeout)  [proxy]</h3>
-<div class="paragraph">
-<p>Returns a Promise which resolves when a value for page.prop is found,
-or <code>undefined</code> after <code>timeout</code> milliseconds (default 2000).  If <code>timeout</code> is null, waits forever.  If <code>timeout</code> is 0,
-equivalent to <code>db.getProperty()</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_on_db_off_db_once">2.9. db.on / db.off / db.once</h3>
-<div class="paragraph">
-<p>Request to have a function called when database state changes.
-Details are below in the list of events.  Probably implemented with
-EventEmitter3, but use of methods other than .on .off and .once is not
-supported.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_replaysince_seq_event_cb">2.10. db.replaySince(seq, event, cb)</h3>
-<div class="paragraph">
-<p>Like db.on, but for events in the past, start at <code>delta.seq</code> equal to
-<code>seq</code>.</p>
-</div>
-<div class="paragraph">
-<p>Do no use db.replaceSince and then call db.on, unless you&#8217;re fine with
-dropping events.  Use db.listenSince to make a seamless transition.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_listensince_seq_event_cb">2.11. db.listenSince(seq, event, cb)</h3>
-<div class="paragraph">
-<p>A combination of <code>db.replaySince</code> and <code>db.on</code> guaranteed to give all
-the events, in order, starting with <code>seq</code> and proceeding into the
-future.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_view_viewoptions">2.12. db.view(viewOptions)</h3>
-<div class="paragraph">
-<p>Create and return a view of this db using the given options.  See
-Views for details.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_bridge_otherdb">2.13. db.bridge(otherDB)</h3>
-<div class="paragraph">
-<p>Initiates bridging between these two dbs, bringing them into sync.</p>
-</div>
-<div class="paragraph">
-<p>Return a Bridge object to control it.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_db_close">2.14. db.close()</h3>
-<div class="paragraph">
-<p>Close the db and release resources.  This may be necessary for a
-nodejs client to terminate, since an open network connection keeps the
-process alive.</p>
-</div>
-<div class="paragraph">
-<p>Returns an ignorable Promise which resolves when lower levels report
-completion.  Worth waiting for during repeated testing, at least.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_database_classes">3. Database Classes</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_datapages_inmem">3.1. datapages.InMem()</h3>
-<div class="paragraph">
-<p>Straightforward in-memory DB, using JavaScript Proxy objects.  Supports full api, including features tagged "[proxy]"</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_datapages_pg_pg">3.2. [TODO] datapages-pg.PG</h3>
-<div class="paragraph">
-<p>Integrate pg-live-data</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_datapages_mindb">3.3. datapages.MinDB()</h3>
-<div class="paragraph">
-<p>Straightforward in-memory delta-only DB.  Does not support items tagged "[proxy]".</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_datapages_flatfile_filename">3.4. datapages.FlatFile(filename)</h3>
-<div class="paragraph">
-<p>On-disk delta-only DB.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_datapages_remote">3.5. datapages.Remote</h3>
-<div class="paragraph">
-<p>Full-featured (including Proxies) connection to a server.  Implemented
-as InMem bridged to RawClient.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_datapages_rawclient">3.6. datapages.RawClient</h3>
-<div class="paragraph">
-<p>Delta-only connection to server.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_views_2">4. Views</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>When a view is constructed, several properties can be specified,
-defining the view.  Every view has one 'base' db, which it present
-pages selected from.</p>
-</div>
-<div class="sect2">
-<h3 id="_name">4.1. name</h3>
-<div class="paragraph">
-<p>TBD</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_filter">4.2. filter</h3>
-<div class="paragraph">
-<p>TBD</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_groupby">4.3. groupBy</h3>
-<div class="paragraph">
-<p>TBD</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_sortby">4.4. [TODO] sortBy</h3>
-<div class="paragraph">
-<p>If a db is ordered, then .limit makes a lot more sense.</p>
-</div>
-<div class="paragraph">
-<p>On a sorted view, you can also do: db.first(), db.last(), db.index(0),
-db.index(-1), etc.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_limit">4.5. [TODO] limit</h3>
-<div class="paragraph">
-<p>Aka db.slice(0, n-1)</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_deltafilter">4.6. [TODO] deltaFilter</h3>
-<div class="paragraph">
-<p>TBD</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_events">5. Events</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_event_appear">5.1. Event: appear</h3>
-<div class="paragraph">
-<p>Emitted when a new page appears in the dbview, passed that page.
-Optional addition parameter is the delta which triggered the event.</p>
-</div>
-<div class="paragraph">
-<p>Note that watching for <code>appear</code> on a top level db will get you lots of
-empty objects, because they appear before their properties.  So this
-is mostly useful on views where the desired properties have been
-flagged as <code>required</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_event_disappear">5.2. Event: disappear</h3>
-<div class="paragraph">
-<p>Emitted when a page goes away from the dbview, passed that page.
-Optional addition parameter is the delta which triggered the event.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_event_stable">5.3. Event: stable</h3>
-<div class="paragraph">
-<p>Emitted when no changes have occured for <code>stabilityms</code> milliseconds.
-Useful for browser displays.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_event_change">5.4. Event: change</h3>
-<div class="paragraph">
-<p>Emitted whenever anything changes, possibly several times per change.
-Called with the page and the delta.  Don&#8217;t update a display with every
-change; either use it to set a dirty bit, or use the 'stable' event,
-depending whether you want the display to have lots of fast motion.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_event_delta">5.5. Event: delta</h3>
-<div class="paragraph">
-<p>Similar the <code>change</code>, but only passes the delta.  Mostly used internally.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_event_error">5.6. [TODO] Event: error</h3>
-<div class="paragraph">
-<p>Some asynchronous error has occured.  Passed an object with .message
-and .code, where .code is listed under [Errors].</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_event_results">5.7. [TODO] Event: results</h3>
-<div class="paragraph">
-<p>Emitted the same time as 'stable', but given an Array containing a
-frozen copy of the current db.  Producing and/or maintaining that copy
-might be expensive, so us 'stable' unless you&#8217;re actually going to use
-that parameter.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="__todo_event_progress">5.8. [TODO] Event: progress</h3>
-<div class="paragraph">
-<p>Emitted with (stepsDone, totalSteps), at least once per second during
-long operations.  stepsDone will always increase (unless things are
-restarted), but totalSteps might also, so the fraction complete
-(stepsDone / totalSteps) might decrease.  When stepsDone ===
-totalSteps, we should be 'stable'.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_merge">6. Merge</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>TBD</p>
 </div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-10-17 12:27:58 EDT
+Last updated 2017-10-17 12:26:43 EDT
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/styles/github.min.css">

@@ -1,3 +1,4 @@
+// BEWARD: THIS TEXT IS INCLUDED USING LINE NUMBERS IN api.adoc
 const datapages = require('datapages')
 
 const db = new datapages.Remote({port: 1954})
@@ -10,12 +11,12 @@ const dogs = db.view({
   }
 })
 
-dogs.listenSince(0, 'appear', dog => {
+dogs.on('appear', dog => {
   console.log('Found a dog: ', dog.name, 'an', dog.breed)
   dog.on('change', (page, delta) => {
     console.log('  change: ', dog.name, delta.property, '=', delta.value)
   })
 })
-dogs.listenSince(0, 'disappear', dog => {
+dogs.on('disappear', dog => {
   console.log('Dog gone! ', dog.name, 'an', dog.breed)
 })
