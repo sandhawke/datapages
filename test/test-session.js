@@ -2,7 +2,7 @@ const test = require('./setup')
 
 // these want ws because our fake transport doesn't currently do sessions
 
-test.multi({client: true, raw: true, ws: true}, 'session data', async (t) => {
+test.multi({client: true, raw: true, ws: true}, 'session data raw', async (t) => {
   let trans = t.db.transport
   await t.db.waitForSession()
   //trans.on('$session-active', async () => {
@@ -21,7 +21,7 @@ test.multi({client: true, raw: true, ws: true}, 'session data', async (t) => {
   // })
 })
 
-test.multi({client: true, proxy: true, ws: true}, 'session data', async (t) => {
+test.multi({client: true, proxy: true, ws: true}, 'session data proxy', async (t) => {
   let trans = t.db.transport
   if (!trans) trans = t.db.rawClient.transport
   await t.db.waitForSession()
@@ -43,13 +43,10 @@ test.multi({client: true, proxy: true, ws: true}, 'session data', async (t) => {
   // })
 })
 
-test.multi({client: true, proxy: true, ws: true}, 'session data', async (t) => {
-  await t.db.waitForSession()
-  await t.sleep(100)  // replace with waiting for property
-  
-  // _owner should be ... itself?   it's not a ref at all right now.
-  t.ok(t.db.sessionData._isSession)
-  // t.equal(t.db.sessionData, 'x')
+test.multi({client: true, proxy: true, ws: true}, 'session data proxy simple', async (t) => {
+  // await t.db.waitForSession()
+  const flag = await t.db.waitForSessionProperty('_isSession')
+  t.ok(flag)
   t.end()
 })
 

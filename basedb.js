@@ -161,7 +161,7 @@ class DB extends EventEmitter {
       }
       this.listenSince(0, 'change', func)
       if (timeout !== null) {
-        if (timeout === undefined) timeout = 10000
+        if (timeout === undefined) timeout = 2000
         timer = setTimeout(() => {
           that.debug('timeout waiting %dms for %j', timeout, property)
           this.off('delta', func)

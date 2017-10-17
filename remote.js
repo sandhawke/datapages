@@ -23,6 +23,22 @@ class Remote extends InMem {
     return r
   }
 
+  async waitForSessionProperty (prop, timeout) {
+    await this.rawClient.waitForSession()
+    const id = this.rawClient.transport.sessionData.id
+    const val = await this.rawClient.waitForProperty(id, prop, timeout)
+    if (val === undefined) return undefined
+    
+    this.debug('raw sessionProperty value', val)
+    return val
+
+    // TODO
+    // for refs/arrays
+    // const res = this.myBridge.reach(this.rawClient, this, val)
+    // this.debug('returning sessionProperty', res)
+    // return res
+  }
+
   waitForSession () {
     return this.rawClient.waitForSession()
   }
