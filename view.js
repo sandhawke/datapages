@@ -46,6 +46,9 @@ class View extends BaseDB {
         this.emit('delta', delta)
       }
     })
+
+    // Ummmm.  don't we need a replay?  I mean, ... how/when is groups
+    // and members going to be loaded up?   But it's async.  :-/
   }
 
   _add (page, delta, emit) {
@@ -217,6 +220,15 @@ class View extends BaseDB {
     default:
         throw Error(`unknown listenSince event "${ev}"`)
     }
+  }
+
+  // return a JSON-able version of groups, no Set or Map
+  get groupsObject () {
+    const result = {}
+    for (const [key, val] of this.groups) {
+      result[key] = Array.from(val)
+    }
+    return result
   }
 }
 

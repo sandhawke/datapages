@@ -14,7 +14,7 @@ const atEnd = require('tape-end-hook')
 const mockDate = require('mockdate')
 const datapages = require('..')
 const transport = require('./fake-transport')
-const debug = require('debug')('datapages_test')
+const debug = require('debug')('dp_test')
 
 mockDate.set('2/1/1988', 120)
 const fakeNow = new Date()
@@ -22,6 +22,21 @@ debug('date mocked to', fakeNow)
 
 tape.debug = debug
 tape.setups = []
+
+function filterSetups () {
+  const arg = process.env.SETUP
+  if (arg) {
+    console.log('# filtering using SETUP =', arg)
+    for (const setup of tape.setups) {
+      if (!setup.name.toLowerCase().match(arg.toLowerCase())) {
+        setup.skip = true
+        debug('skipping', setup.name)
+      } else {
+        debug('keeping', setup.name)
+      }
+    }
+  }
+}
 
 // turns into one call to test(...) for each applicable setup, with
 // setup.init having a chance to run on the t argument, before test is
@@ -73,6 +88,7 @@ function multitest (restrictions, name, cb, test) {
       atEnd(t, () => {
         // t.comment('ended: ' + rname)
       })
+      t.debug = debug
       t.sleep = (ms) => {
         return new Promise((resolve) => {
           setTimeout(resolve, ms)
@@ -125,10 +141,13 @@ async function tmpfile (suffix) {
 }
 
 // restriction flags
-const proxy = true // t.db will be like inmem, with proxy objects
+const proxy = true // t.db implements proxy interface (not raw interface)
 const server = true // t.server will be setup, t.anotherClient() defined
 // const view = true
 const browser = true // should work in browser, too
+const client = true // t.db is a client
+const raw = true // t.db implements raw interface (not proxy interface)
+const ws = true // uses websockets
 
 setup({
   name: 'inmem',
@@ -147,29 +166,89 @@ setup({
   }
 })
 
-/*
 setup({
+  name: 'rawclient-inprocess-mindb-server',
+  browser,
+  raw,
+  client,
+  init: async (t) => {
+    const servOpts = {}
+    const f = new transport.Server()
+    servOpts.transport = f
+    servOpts.doOwners = true
+    if (!servOpts.db) servOpts.db = new datapages.MinDB()
+    const s = new datapages.Server(servOpts)
+    const c = new datapages.RawClient({transport: f.connectedClient()})
+    atEnd(t, () => {
+      return Promise.all([
+        c.close(),
+        s.close()
+      ])
+    })
+    
+    t.db = c
+  }
+})
+
+async function wsInit(t, ClientClass) {
+  const servOpts = {}
+  servOpts.doOwners = true
+  servOpts.db = new datapages.MinDB()
+  servOpts.sessionOptions = {
+    serverSecretsDBName: await tmpfile('server-secrets')
+  }
+  
+  const s = new datapages.Server(servOpts)
+
+  await s.transport.start()
+
+  const options = {
+    serverAddress: s.transport.address,
+    skipResume: true // otherwise we might reuse auth for old test server on same port
+  }
+
+  t.db = new ClientClass(options)
+  
+  atEnd(t, () => {
+    return Promise.all([
+      t.db.close(),
+      s.close()
+    ])
+  })
+}
+
+setup({
+  name: 'rawclient-ws-mindb-server',
+  raw,
+  client,
+  ws,
+  init: async (t) => {
+    await wsInit(t, datapages.RawClient)
+  }
+})
+
+setup({
+  name: 'proxyclient-ws-mindb-server',
+  proxy,
+  client,
+  ws,
+  init: async (t) => {
+    await wsInit(t, datapages.Remote)
+  }
+})
+
+
+/*
+  setup({
   name: 'remote-to-ready-server',
   proxy,
   browser,
   init: async (t) => {
   }
-})
+  })
 */
 
-const arg = process.env.SETUP
-if (arg) {
-  console.log('# filtering using SETUP =', arg)
-  for (const setup of tape.setups) {
-    if (!setup.name.toLowerCase().match(arg.toLowerCase())) {
-      setup.skip = true
-      debug('skipping', setup.name)
-    } else {
-      debug('keeping', setup.name)
-    }
-  }
-}
-
+filterSetups()
 debug('local setup for tape compete')
 
 module.exports = tape

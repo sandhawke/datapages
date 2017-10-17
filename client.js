@@ -31,6 +31,10 @@ class Client extends BaseDB {
     })
   }
 
+  waitForSession () {
+    return this.transport.waitForSession()
+  }
+  
   close () {
     // maybe: this.transport.onError = (err) => 
     // Nope, it's a reject :
@@ -48,7 +52,7 @@ class Client extends BaseDB {
   }
 
   listenSince (seq, name, cb) {
-    this.on('change', cb)
+    this.on(name, cb)
     this.transport.send('subscribe', 'all', seq)
   }
 

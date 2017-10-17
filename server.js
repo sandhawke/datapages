@@ -24,24 +24,27 @@ class Server {
       if (this.db.nextSubjectID === 1) {
         // can get tricked by manual file
         this.systemID = this.db.create()
+        this.debug('systemID assigned as', this.systemID)
       }
     }
 
-    if (!this.transport) {
-      if (!options.sessionOptions) options.sessionOptions = {}
-      // We have the db dispense our session ids, so that sessions ids
-      // ARE database objects.  The page with id sessionID is that
-      // session's public "about" page.   TODO only that session write
-      // it.
-      options.sessionOptions.dispenseSessionID = async () => {
-        const id = this.db.create()
-        this.debug('dispensing session id', id)
-        if (this.doOwners) {
-          this.db.setProperty(id, '_owner', id, this.systemID, new Date())
-          this.db.setProperty(id, '_isSession', true, this.systemID, new Date())
-        }
-        return id
+    if (!options.sessionOptions) options.sessionOptions = {}
+    // We have the db dispense our session ids, so that sessions ids
+    // ARE database objects.  The page with id sessionID is that
+    // session's public "about" page.   TODO only that session write
+    // it.
+    options.sessionOptions.dispenseSessionID = async () => {
+      const id = this.db.create()
+      this.debug('dispensing session id', id)
+      if (this.doOwners) {
+        this.debug('setting properties on session object')
+        this.db.setProperty(id, '_owner', {ref: id}, this.systemID, new Date())
+        this.db.setProperty(id, '_isSession', true, this.systemID, new Date())
       }
+      return id
+    }
+    
+    if (!this.transport) {
       this.transport = new webgram.Server(options)
     }
 
@@ -53,6 +56,7 @@ class Server {
 
     if (this.doOwners) {
       this.transport.on('$session-active', conn => {
+        this.debug('handling $session-active')
         const that = this
         const connObj = this.db.create({isConnection: true,
                                         session: conn.sessionData._sessionID}, this.systemID, new Date())
