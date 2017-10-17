@@ -38,7 +38,7 @@ or arrays of any of these.  We can create a page like this:
 
 [source,javascript]
 ----
-include::examples/dogs/fluffy.js[lines=5..12]
+include::../examples/dogs/fluffy.js[lines=5..12]
 ----
 
 In that example, there are two nested objects, one about Hagrid and
@@ -61,7 +61,7 @@ specific views are defined.  We can create a view like this:
 
 [source,javascript]
 ----
-include::examples/dogs/watch.js[lines=5..12]
+include::../examples/dogs/watch.js[lines=5..12]
 ----
 
 This view will gather and make available pages which have an isDog
@@ -85,7 +85,7 @@ code like this is common:
 
 [source,javascript]
 ----
-include::examples/dogs/watch.js[lines=13..100]
+include::../examples/dogs/watch.js[lines=13..100]
 ----
 
 === Advanced Topics
@@ -211,7 +211,10 @@ Straightforward in-memory DB, using JavaScript Proxy objects.  Supports full api
 
 === [TODO] datapages-pg.PG
 
-Integrate pg-live-data
+Integrate pg-live-view as a peer dependency and update its API to
+match current spec & tests.
+
+See https://github.com/sandhawke/pg-live-view
 
 === datapages.MinDB()
 
@@ -319,3 +322,8 @@ totalSteps, we should be 'stable'.
 == Merge
 
 TBD
+
+== Delta
+
+TBD
+
