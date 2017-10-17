@@ -11,3 +11,4 @@ webgram-server-secrets/
 data.deltas/
 test/run/
 webgram-client-secrets.json
+examples/sheet.csv

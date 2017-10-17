@@ -44,7 +44,6 @@ test.multi({client: true, proxy: true, ws: true}, 'session data proxy', async (t
 })
 
 test.multi({client: true, proxy: true, ws: true}, 'session data proxy simple', async (t) => {
-  // await t.db.waitForSession()
   const flag = await t.db.waitForSessionProperty('_isSession')
   t.ok(flag)
   t.end()
