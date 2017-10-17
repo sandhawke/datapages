@@ -76,14 +76,23 @@ class DB extends EventEmitter {
   }
   */
 
-  setProperty (subject, property, value, who, when) {
-    const delta = {subject, property, value}
-    // we don't want { who: undefined } cluttering up our test cases, etc
-    if (who !== undefined) delta.who = who
-    if (when !== undefined) delta.when = when
+  setProperty (subject, property, value, who, when, why, ondurable) {
+    let delta 
 
+    if (property === undefined || typeof property !== 'function') {
+      delta = subject
+      ondurable = property
+    } else {
+      delta = {subject, property, value}
+      
+      // we don't want { who: undefined } cluttering up our test cases, etc
+      if (who !== undefined) delta.who = who
+      if (when !== undefined) delta.when = when
+      if (why != undefined) delta.why = why
+    }
+      
     delta.value = this.shred(delta.value)
-    this.applyDelta(delta)
+    return this.applyDelta(delta, ondurable)
   }
 
   createBlank () {

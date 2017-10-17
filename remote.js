@@ -15,6 +15,9 @@ class Remote extends InMem {
     // this delta is from local or remote.
     if (delta.who === undefined) delta.who = this.sessionID
     return super.applyDelta(delta)
+
+    // maybe I should use the bridge as a mapper and actually call
+    // rawClient.applyDelta so I can pass along ondurable?
   }
   
   get sessionID () {

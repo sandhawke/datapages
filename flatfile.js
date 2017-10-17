@@ -86,6 +86,7 @@ class FlatFile extends BaseDB {
     }
     fs.appendFile(this.fileA, entry.text, {encoding: 'utf8'}, (err) => {
       if (err) throw err
+      if (entry.ondurable) entry.ondurable()
       this.emit('save', entry.delta)
       this._writeLoop()
     })
@@ -152,8 +153,14 @@ class FlatFile extends BaseDB {
     return id
   }
 
-  applyDelta (delta) {
+  applyDelta (delta, ondurable) {
+    let returnValue
     this.debug('applyDelta() %o', delta)
+    if (ondurable === undefined) {
+      returnValue = new Promise(resolve => {
+        ondurable = resolve
+      })
+    }
     if (delta.seq === undefined) delta.seq = this.nextDeltaID++
     this.deltas.add(delta)
     this.emit('delta', delta)
@@ -176,7 +183,8 @@ class FlatFile extends BaseDB {
     this.debug('record: %o', record)
     let text = dsv.csvFormatRows([record]) + '\n'
     this.debug('as cvs: %o', text)
-    this.buffer.push({delta, text})
+    this.buffer.push({delta, text, ondurable})
+    return returnValue
   }
 }
 
