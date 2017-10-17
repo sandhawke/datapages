@@ -51,6 +51,18 @@ class View extends BaseDB {
     // and members going to be loaded up?   But it's async.  :-/
   }
 
+  createBlank () {
+    return this.base.create()
+  }
+
+  create (...args) {
+    const page = super.create(...args)
+    if (this.passes(page)) {
+      return page
+    }
+    throw Error('page created in view does not pass view filter')
+  }
+  
   _add (page, delta, emit) {
     this.members.add(page, delta)
     if (this.groupBy) {
