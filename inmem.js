@@ -200,10 +200,13 @@ class InMem extends BaseDB {
 
   applyDelta (delta) {
     // setProperty (proxy, name, value) {
-    const {subject, property, value} = delta
+    const {subject, property, value, who} = delta
     this.debug('applyDelta %o', delta)
     const target = subject.__target
     this.debug('  target is %o', target)
+
+    // but ... we want the proxy for their sessionData, not the number
+    if (target._owner === undefined) target._owner = delta.who
 
     // WISH LIST: check that the value is allowed by all our async Validators
 
