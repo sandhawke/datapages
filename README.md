@@ -1,5 +1,5 @@
 
-A small, fast, and powerful took for maintain distributed/synchronized
+A small, fast, and powerful tool for maintain distributed/synchronized
 data, suitable for use in webapps.
 
 Client code instantiates datapages.Remote() which connects to the
@@ -7,13 +7,12 @@ server and gives a read/write view of a shared set of "pages" (aka
 "documents" or "objects" or "records").  Changes propagate quickly and
 can optionally persist on the server.
 
-API style takes some inspriration from
+API style takes some inspriration from my earlier
 [crosscloud.js](https://github.com/sandhawke/crosscloud.js/blob/master/doc/planned-api.md)
 
 ## Example
 
-This is a normal API to use.  You can also use the Raw API, if the
-overhead of proxies isn't appropriate for your application.
+See the examples and test directories of complete examples.   In particular, run `node example/demo-server.js`.
 
 ```js
 const datapages = require('datapages')
