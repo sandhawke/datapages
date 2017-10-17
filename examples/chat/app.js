@@ -12,27 +12,40 @@ body.innerHTML = `<div>
 
 <p>Your Nick: <input type="text" id="name"></p>
 
-<p>Recently seen users:</p>
-<ol id="users"></ol>
-
 <p>Say: <input type="text" id="compose"></p>
 
 Messages:<div id="messages">.</div>
 </div>`
 
+const nm = (page, def) => {
+  if (page && page.chatName) return page.chatName
+  return def
+}
+
+/*
 const me = db.create({
   chatting: true,
   now: new Date()
 })
+*/
 
-const users = document.getElementById('users')
 const pusers = document.getElementById('pusers')
 const compose = document.getElementById('compose')
 const messages = document.getElementById('messages')
 const name = document.getElementById('name')
+
 name.oninput = function () {
-  me.name = this.value
+  db.sessionData.chatName = this.value
 }
+
+db.waitForSessionProperty('chatName', null).then(chatName => {
+  console.log('chat name available:', chatName)
+  name.value = chatName
+  db.sessionData.on('change', page => {
+    console.log('sessionData changed!')
+    name.value = page.chatName
+  })
+})
 
 compose.onkeypress = function (ev) {
   if (ev.code === 'Enter') {
@@ -43,7 +56,6 @@ compose.onkeypress = function (ev) {
     this.value = ''
   }
 }
-
 
 const status  = document.createElement('div')
 body.appendChild(status)
@@ -56,31 +68,6 @@ db.listenSince(0, 'change', (page, delta) => {
 const usersById = new Map()
 
 /*
-  TODO get rid of MERGE from here, and instead use
-  sessionData, making it be a proper proxied page
-  For Remote at least
-*/
-const merge = (id) => {
-  const ul = []
-  const versions = usersById.get(id)
-  // console.log('versions:', versions)
-  if (versions) {
-    for (const p of versions) {
-      ul.push([p.now, p])
-    }
-    ul.sort()
-    ul.reverse()
-    let answer
-    while (true) {
-      answer = ul.shift()
-      // console.log('considering', answer)
-      if (!answer) return undefined
-      if (answer[1].name) return answer[1]
-    }
-  }
-  return undefined
-}
-
 const nm = (id, def) => {
   const m = merge(id)
   if (m && m.name) {
@@ -88,11 +75,21 @@ const nm = (id, def) => {
   }
   return def
 }
+*/
 
 let id
 
+const who = db.view({
+  filter: {
+    _isSession: true,
+    chatName: {required: true}
+  }
+})
+who.on('stable', paintUserList)
+
+/*
 const v = db.view({filter: {chatting: true}})
-v.on('stable', paintUserList)
+// v.on('stable', paintUserList)
 v.listenSince(0, 'change', (page, delta) => {
   if (db.sessionData) id = db.sessionData.id
   
@@ -120,10 +117,18 @@ v.listenSince(0, 'change', (page, delta) => {
   // text += ' (you)'
   // }
   })
+*/
 
-db.view({filter: {isMessage: true}})
+// If we do this without waiting for a tick, we'll probably see the
+// users names at the time they sent the messages, because this will
+// be handled on the first run-through.
+
+setTimeout(renderMessages, 0)
+// renderMessages()
+
+function renderMessages () {
+  db.view({filter: {isMessage: true}})
   .listenSince(0, 'change', (page, delta) => {
-    console.log('x')
     if (!page.__e) {
       page.__e = document.createElement('span')
       messages.insertBefore(page.__e, messages.firstChild)
@@ -131,21 +136,24 @@ db.view({filter: {isMessage: true}})
     let tm = ''
     if (!delta.when) delta.when = new Date()
     tm = delta.when.toISOString().slice(11,19)
-    const who = nm(delta.who || id, 'anon')
-    let text = tm + ': &lt;' + (who || '_anon_') + '> ' + (page.text || '') + '<br>'
-    console.log(text)
+
+    const who = db.proxyFor(page._owner).chatName + ' (session ' + delta.who + ')'
+    let text = tm + ' &lt;' + (who || '_anon_') + '> ' + (page.text || '') + '<br>'
+    // console.log(text)
     page.__e.innerHTML = text
   })
+}
 
-
-function paintUserList (users) {
-  const nm = (page, def) => {
-    if (page.name) return page.name
-    return def
-  }
+function paintUserList (who) {
+  // look to see who really has an active connection?
+  
   pusers.style.border = '1px solid #ddd'
   pusers.style.borderRight =  'none'
   pusers.style.padding = '0.5em'
-  console.log('users', Array.from(users))
-  pusers.innerHTML = Array.from(users).map(x => nm(x, '? anon') + '<br>').join('')
+  // console.log('users', Array.from(who))
+  function map (x) {
+    return nm(x, '? anon') /* + ' (session ' + x._owner+ */ + '<br>'
+  }
+  pusers.innerHTML = '<b>Sessions</b><br><hr>' +
+    Array.from(who).map(map).join('')
 }
