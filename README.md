@@ -12,7 +12,12 @@ API style takes some inspriration from my earlier
 
 ## Example
 
-See the examples and test directories of complete examples.   In particular, run `node example/demo-server.js`.
+See the examples and test directories for complete examples.  Try
+```sh
+node example/demo-server.js
+```
+
+Basic idea is something like this: (see examples/dogs)
 
 ```js
 const datapages = require('datapages')
