@@ -28,7 +28,7 @@ function filterSetups () {
   if (arg) {
     console.log('# filtering using SETUP =', arg)
     for (const setup of tape.setups) {
-      if (!setup.name.toLowerCase().match(arg.toLowerCase())) {
+      if (setup.name.toLowerCase() !== arg.toLowerCase()) {
         setup.skip = true
         debug('skipping', setup.name)
       } else {
@@ -76,7 +76,7 @@ function multitest (restrictions, name, cb, test) {
     if (setup.skip) continue
     let wanted = true
     for (const key of Object.keys(restrictions)) {
-      if (setup[key] !== restrictions[key]) wanted = false
+      if ((!!setup[key]) !== (!!restrictions[key])) wanted = false
     }
     if (!wanted) continue
     if (typeof window === 'object') {  // we're in a browser
@@ -155,6 +155,15 @@ setup({
   browser,
   init: async (t) => {
     t.db = new datapages.InMem()
+  }
+})
+
+setup({
+  name: 'mindb',
+  raw,
+  browser,
+  init: async (t) => {
+    t.db = new datapages.MinDB()
   }
 })
 

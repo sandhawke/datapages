@@ -144,6 +144,35 @@ class DB extends EventEmitter {
   shred (value) {
     return this.refs.to(value)
   }
+
+  waitForProperty (subject, property, timeout) {
+    const that = this
+    let timer = null
+    return new Promise(resolve => {
+      function func (pg, delta) {
+        that.debug('waitForProperty check delta %o', delta)
+        if (delta.subject === subject && delta.property === property) {
+          timeout = null // so the timer never gets set, if it hasn't been yet
+          if (timer !== null) clearTimeout(timer)
+          that.debug('timer canceled')
+          resolve(delta.value)  // TODO output refs.from 
+          that.off('change', func)
+        }
+      }
+      this.listenSince(0, 'change', func)
+      if (timeout !== null) {
+        if (timeout === undefined) timeout = 10000
+        timer = setTimeout(() => {
+          that.debug('timeout waiting %dms for %j', timeout, property)
+          this.off('delta', func)
+          resolve(undefined)
+        }, timeout)
+        that.debug('timer is', timer)
+        // we can't do this without having tests return too soon & fail:
+        // if (timer.unref) timer.unref() // nodejs don't keep alive
+      }
+    })
+  }
 }
 
 /* Not sure why this doesn't work; for now we only need it on View anyway,
