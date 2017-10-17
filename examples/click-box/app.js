@@ -54,7 +54,7 @@ boxes.listenSince(0, 'appear', (page, delta) => {
       db.delete(page)
     })
     // could do a drag-watcher, too...
-    box.innerHTML = '<p>created by session ' + (delta.who || db.sessionData.id) + '</p><p>anyone can click to close</p>'
+    box.innerHTML = '<p>created by session ' + (delta.who || db.sessionID) + '</p><p>anyone can click to close</p>'
   }
 })
   
