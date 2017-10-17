@@ -20,12 +20,20 @@ const datapages = require('datapages')
 
 const db = datapages.Remote()
 
-db.create({isDog: true, })
+db.create({
+  isDog: true,
+  name: 'Fluffy',
+  owner: { name: 'Hagrid' },
+  heads: 3,  // and yet still, they call it a dog!
+  born: new Date('July 15, 1976'), // not in canon
+  weaknesses: [ { description: 'music induces sleep' } ]
+})
 
 const dogs = db.view({filter: {isDog: true}})
-dogs.listenSince(0, 'appear', dog => {
+dogs.on('appear', dog => {
   console.log('Found a dog! ', dog)
 })
+```
 
 See [API Documentation](api.html) and [API Ideas](api-ideas.html)
 
