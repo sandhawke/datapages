@@ -4,7 +4,7 @@
   "description": "small, fast, and powerful synchronizing json-style database",
   "main": "index.js",
   "scripts": {
-    "test": "asciidoctor docs/*.adoc && standard && tap --cov test*.js test/test*.js",
+    "test": "asciidoctor docs/*.adoc && standard && tap --cov test*.js test/test*.js test/browser-test.js",
     "docs": "asciidoctor docs/*.adoc",
     "coverage": "standard && tap --cov test*.js --coverage-report=lcov",
     "watch": "watchify client.js -o static/bundle.js -v",

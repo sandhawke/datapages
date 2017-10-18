@@ -9,31 +9,30 @@ body.innerHTML = `<div>
 <button id="create">Create Box</button>
 </div>`
 
-const status  = document.createElement('div')
+const status = document.createElement('div')
 body.appendChild(status)
 status.style.position = 'absolute'
 
 const create = document.getElementById('create')
 create.onclick = function (ev) {
-  const rec = db.create({
+  db.create({
     isBox: true,
     started: new Date(),
     top: 100 + Math.random() * 500,
     left: Math.random() * 500,
     rgb: [ 50 + Math.round(Math.random() * 200),
-           50 + Math.round(Math.random() * 200),
-           50 + Math.round(Math.random() * 200) ]
-    
+      50 + Math.round(Math.random() * 200),
+      50 + Math.round(Math.random() * 200) ]
   })
 }
 
 const boxes = db.view(
   {filter:
-   {isBox: true,
+  {isBox: true,
     top: {required: true},
     left: {required: true},
     rgb: {required: true}
-   }})
+  }})
 
 boxes.listenSince(0, 'appear', (page, delta) => {
   // console.log('appear', page, delta)
@@ -57,7 +56,6 @@ boxes.listenSince(0, 'appear', (page, delta) => {
     box.innerHTML = '<p>created by session ' + (delta.who || db.sessionID) + '</p><p>anyone can click to close</p>'
   }
 })
-  
 
 boxes.listenSince(0, 'change', (page, delta) => {
   let box = page.__box

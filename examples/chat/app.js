@@ -1,7 +1,7 @@
 'use strict'
 
 const datapages = require('datapages')
-const setdefault = require('setdefault')
+// const setdefault = require('setdefault')
 // const debug = require('debug')
 
 const db = new datapages.Remote(window.serverAddress)
@@ -57,15 +57,14 @@ compose.onkeypress = function (ev) {
   }
 }
 
-const status  = document.createElement('div')
+const status = document.createElement('div')
 body.appendChild(status)
-
 
 db.listenSince(0, 'change', (page, delta) => {
   status.innerHTML = '<pre>Delta: ' + JSON.stringify(delta, null, 2) + '</pre>'
 })
 
-const usersById = new Map()
+// const usersById = new Map()
 
 /*
 const nm = (id, def) => {
@@ -77,7 +76,7 @@ const nm = (id, def) => {
 }
 */
 
-let id
+// let id
 
 const who = db.view({
   filter: {
@@ -92,7 +91,7 @@ const v = db.view({filter: {chatting: true}})
 // v.on('stable', paintUserList)
 v.listenSince(0, 'change', (page, delta) => {
   if (db.sessionData) id = db.sessionData.id
-  
+
   // console.log(delta)
   if (!page.__seen) {
     if (!delta.who) delta.who = id
@@ -110,7 +109,7 @@ v.listenSince(0, 'change', (page, delta) => {
     // text += `<pre>id=${id} name=${JSON.stringify(merge(id))}</pre><br>\n`
     text += `<pre>id=${xid} name=${nm(xid, 'anon')}</pre><br>\n`
   }
-  
+
   users.innerHTML = text
   // let text = 'user: ' + (page.name ? page.name : '<em>anon</em>') + delta.who
   // if (page === me) {
@@ -135,7 +134,7 @@ function renderMessages () {
     }
     let tm = ''
     if (!delta.when) delta.when = new Date()
-    tm = delta.when.toISOString().slice(11,19)
+    tm = delta.when.toISOString().slice(11, 19)
 
     const who = db.proxyFor(page._owner).chatName + ' (session ' + delta.who + ')'
     let text = tm + ' &lt;' + (who || '_anon_') + '> ' + (page.text || '') + '<br>'
@@ -146,9 +145,9 @@ function renderMessages () {
 
 function paintUserList (who) {
   // look to see who really has an active connection?
-  
+
   pusers.style.border = '1px solid #ddd'
-  pusers.style.borderRight =  'none'
+  pusers.style.borderRight = 'none'
   pusers.style.padding = '0.5em'
   // console.log('users', Array.from(who))
   function map (x) {

@@ -1,6 +1,6 @@
 'use strict'
 
-const dp = require('datapages')
+// const dp = require('datapages')
 const dsv = require('d3-dsv')
 const fs = require('fs')
 
@@ -18,7 +18,7 @@ for (const record of output) {
   const bak = record.time
   record.time = new Date(record.time)
   if (isNaN(record.time)) {
-    const dt = bak.slice(0,10) + 'T' + bak.slice(11) + ':00Z'
+    const dt = bak.slice(0, 10) + 'T' + bak.slice(11) + ':00Z'
     // console.log('trying', dt)
     record.time = new Date(dt)
   }

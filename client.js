@@ -34,9 +34,9 @@ class Client extends BaseDB {
   waitForSession () {
     return this.transport.waitForSession()
   }
-  
+
   close () {
-    // maybe: this.transport.onError = (err) => 
+    // maybe: this.transport.onError = (err) =>
     // Nope, it's a reject :
     try {
       this.transport.close()

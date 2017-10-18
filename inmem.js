@@ -35,14 +35,14 @@ class InMem extends BaseDB {
     this.handler = {
       get: this.proxyHandlerForGet.bind(this),
       set: this.proxyHandlerForSet.bind(this),
-      ownKeys : this.proxyHandlerForOwnKeys.bind(this)
+      ownKeys: this.proxyHandlerForOwnKeys.bind(this)
     }
 
     this.debug('constructed')
   }
 
   get materialized () { return true }
-  
+
   async maxSeq () {
     return this.maxSeqUsed
   }
@@ -125,7 +125,7 @@ class InMem extends BaseDB {
   proxyHandlerForOwnKeys (target) {
     return Reflect.ownKeys(target)
   }
-  
+
   proxyHandlerForGet (target, name, receiver) {
     // these are too noisy usually, given that debug() will call this often
     // this.debug('proxyHandlerForGet(..., %j, ...)', name)
@@ -133,7 +133,7 @@ class InMem extends BaseDB {
 
     // nah, let people still read it, eg during 'disappear' handling
     // if (target._deleted) throw Error('accessing deleted object')
-    
+
     // if (receiver !== target.__proxy) throw Error('unexpected proxy receiver value')
 
     if (name === util.inspect.custom || name === 'inspect') {
@@ -149,6 +149,7 @@ class InMem extends BaseDB {
       return ee[name].bind(ee)
     }
 
+    /*
     const wrap = (target) => {
       // make a new proxy around this target, ...
       //
@@ -160,13 +161,14 @@ class InMem extends BaseDB {
       if (Array.isArray(target)) return target
       return new Proxy(target, this.handler)
     }
+    */
 
     if (typeof name === 'string') {
       const path = name.match(/([^.]*)\.(.+)/)
       if (path) {
         const head = path[1] // everything before first dot
         const rest = path[2] // everything after first dot
-        this.debug('property path found, using %j . %j',  head, rest)
+        this.debug('property path found, using %j . %j', head, rest)
         const next = this.refs.from(target[head])
         this.debug(' .. next is %o', next)
         const nextWrapped = next // wrap(next)
@@ -176,7 +178,7 @@ class InMem extends BaseDB {
         return result
       }
     }
-    
+
     return this.refs.from(target[name]) // should wrap, really
   }
 
@@ -200,7 +202,7 @@ class InMem extends BaseDB {
 
   applyDelta (delta) {
     // setProperty (proxy, name, value) {
-    const {subject, property, value, who} = delta
+    const {subject, property, value} = delta
     this.debug('applyDelta %o', delta)
     const target = subject.__target
     this.debug('  target is %o', target)

@@ -30,9 +30,9 @@ class DB extends EventEmitter {
 
     this.refs = refs(this.create.bind(this),
                      this.overlay.bind(this))
-    
+
     if (this.stabilityms === undefined) this.stabilityms = 10
-    
+
     // we just care about the delta, but some simpler software mostly
     // just wants to be handled the delta.subject, so ... give it that
     // with on('change')
@@ -60,7 +60,7 @@ class DB extends EventEmitter {
 
   get emitsChange () { return true }
   get emitsStable () { return true }
-  
+
   close () { }
 
   bridge (other) {
@@ -77,32 +77,32 @@ class DB extends EventEmitter {
   */
 
   setProperty (subject, property, value, who, when, why, ondurable) {
-    let delta 
+    let delta
 
-    if (property === undefined || typeof property !== 'function') {
+    if (property === undefined || typeof property === 'function') {
       delta = subject
       ondurable = property
     } else {
       delta = {subject, property, value}
-      
+
       // we don't want { who: undefined } cluttering up our test cases, etc
       if (who !== undefined) delta.who = who
       if (when !== undefined) delta.when = when
-      if (why != undefined) delta.why = why
+      if (why !== undefined) delta.why = why
     }
-      
-    delta.value = this.shred(delta.value)
+
+    // delta.value = this.shred(delta.value)
     return this.applyDelta(delta, ondurable)
   }
 
   createBlank () {
     throw Error('subclass needs to implement createBlank method')
   }
-  
+
   applyDelta () {
     throw Error('subclass needs to implement applyDelta method')
   }
-  
+
   create (overlay, who, when) {
     const id = this.createBlank()
     if (overlay) {
@@ -164,7 +164,7 @@ class DB extends EventEmitter {
           timeout = null // so the timer never gets set, if it hasn't been yet
           if (timer !== null) clearTimeout(timer)
           that.debug('timer canceled')
-          resolve(delta.value)  // TODO output refs.from 
+          resolve(delta.value)  // TODO output refs.from
           that.off('change', func)
         }
       }
@@ -185,7 +185,7 @@ class DB extends EventEmitter {
 }
 
 /* Not sure why this doesn't work; for now we only need it on View anyway,
-   so it's there, without inheritance 
+   so it's there, without inheritance
 
 DB.prototype[Symbol.iterator] = function () {
   return this.items()

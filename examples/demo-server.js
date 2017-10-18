@@ -17,9 +17,9 @@ const glob = require('glob')
 
 async function start () {
   const dps = new datapages.Server({db: new datapages.MinDB(),
-                                    port: process.env.PORT || 1978,
-                                    doOwners: true
-                                   })
+    port: process.env.PORT || 1978,
+    doOwners: true
+  })
 
   dps.db.on('change', (page, delta) => {
     console.log('page changed %o', delta)
@@ -43,7 +43,7 @@ async function start () {
   })
 
   function app (req, res) {
-    glob("*/app.js", function (err, files) {
+    glob('*/app.js', function (err, files) {
       if (err) throw err
       const apps = files.map(x => x.replace(/\/app.js/, ''))
       const app = req.params.app
@@ -55,7 +55,7 @@ async function start () {
       } else {
         msg = 'select a demo app'
       }
-      
+
       res.send(
       `<!doctype html>
 <html lang="en">
@@ -84,7 +84,7 @@ ${script}
     const appjs = browserify(path.join(__dirname, req.params.app, 'app'))
     appjs.bundle().on('error', function (err) {
       console.error('CAUGHT ERROR', err)
-      res.set('Content-Type', 'application/javascript');
+      res.set('Content-Type', 'application/javascript')
       res.send('alert("error packaging app")')
       this.emit('end')
     }).pipe(res)

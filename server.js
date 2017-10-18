@@ -13,6 +13,7 @@ class Server {
 
     if (!this.debugName) this.debugName = ++instanceCounter
     if (!this.debug) this.debug = debugM('datapages_server_' + this.debugName)
+    this.debug('constructing with options %O', options)
 
     if (!this.dbName) this.dbName = 'server-data'
     if (!this.db) {
@@ -43,7 +44,7 @@ class Server {
       }
       return id
     }
-    
+
     if (!this.transport) {
       this.transport = new webgram.Server(options)
     }
@@ -59,7 +60,7 @@ class Server {
         this.debug('handling $session-active')
         const that = this
         const connObj = this.db.create({isConnection: true,
-                                        session: conn.sessionData._sessionID}, this.systemID, new Date())
+          session: conn.sessionData._sessionID}, this.systemID, new Date())
         const f = function f (deletedConn) {
           if (deletedConn === conn) {
             that.db.delete(connObj)
@@ -87,7 +88,7 @@ class Server {
     // to load that now, OR write it now knowing it might be something
     // we'll ignore later on read-through.  IE it's a suggestion.
     // HRM.
-    
+
     this.db.applyDelta(dd)
   }
 

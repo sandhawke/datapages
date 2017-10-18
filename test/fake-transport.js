@@ -26,6 +26,11 @@ class Server extends EventEmitter {
       conn.emit(...args)
     }
 
+    // client.transport = {}
+    client.sessionData = {
+      id: 1
+    }
+
     this.emit('$session-active', conn)
     this.emit('$connect', conn)
 

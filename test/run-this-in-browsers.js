@@ -18,11 +18,13 @@
 //
 // Instead, let "test-in-browser.js" run this via browserify
 
-const test = require('./setup')
-const datapages = require('..')
+// const test = require('./setup')
+// const datapages = require('..')
 
-require('./test-groupby')
-require('./test-listen')
+require('./all-tests')
+
+// require('./test-groupby')
+// require('./test-listen')
 
 /*
 

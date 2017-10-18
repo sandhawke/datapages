@@ -1,11 +1,12 @@
 const test = require('./setup')
 
 // these want ws because our fake transport doesn't currently do sessions
+const opts = {client: true, ws: true, options: {doOwners: true}}
 
-test.multi({client: true, raw: true, ws: true}, 'session data raw', async (t) => {
+test.multi(Object.assign({raw: true}, opts), 'session data raw', async (t) => {
   let trans = t.db.transport
   await t.db.waitForSession()
-  //trans.on('$session-active', async () => {
+  // trans.on('$session-active', async () => {
   t.debug('SESSION ACTIVE')
   const sid = trans.sessionData.id
   t.debug('hello?')
@@ -21,13 +22,13 @@ test.multi({client: true, raw: true, ws: true}, 'session data raw', async (t) =>
   // })
 })
 
-test.multi({client: true, proxy: true, ws: true}, 'session data proxy', async (t) => {
+test.multi(Object.assign({proxy: true}, opts), 'session data proxy', async (t) => {
   let trans = t.db.transport
   if (!trans) trans = t.db.rawClient.transport
   await t.db.waitForSession()
   // trans.on('$session-active', async () => {
   t.debug('SESSION ACTIVE')
-  const sid = trans.sessionData.id
+  // const sid = trans.sessionData.id
   // console.log(sid, t.db.sessionData)
   t.debug('hello?')
   t.debug('sd %O', trans.sessionData)
@@ -43,12 +44,11 @@ test.multi({client: true, proxy: true, ws: true}, 'session data proxy', async (t
   // })
 })
 
-test.multi({client: true, proxy: true, ws: true}, 'session data proxy simple', async (t) => {
+test.multi(Object.assign({proxy: true}, opts), 'session data proxy simple', async (t) => {
   const flag = await t.db.waitForSessionProperty('_isSession')
   t.ok(flag)
   t.end()
 })
-
 
 // try connecting twice to the same server, while allowing client
 // session key storage, and see if sessions properties carry through.

@@ -71,7 +71,7 @@ class FlatFile extends BaseDB {
     // sometimes this is useful to remind us this is keeping us alive,
     // but it's too noisy.
     // this.debug('writeLoop running')
-    
+
     // we could do a join('') before calling appendFile, but some
     // measurements suggest appendFile's buffering is at least as
     // good

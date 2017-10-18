@@ -10,20 +10,23 @@ class Remote extends InMem {
     this.myBridge = this.bridge(this.rawClient)
   }
 
-  applyDelta (delta) {
+  async applyDelta (delta) {
     // put our sessionID in asap, so local code can stop caring if
     // this delta is from local or remote.
+    await this.waitForSession()
     if (delta.who === undefined) delta.who = this.sessionID
+
     return super.applyDelta(delta)
 
     // maybe I should use the bridge as a mapper and actually call
     // rawClient.applyDelta so I can pass along ondurable?
   }
-  
+
   get sessionID () {
+    // console.log('TRANSPORT', this.rawClient.transport)
     return this.rawClient.transport.sessionData.id
   }
-  
+
   // make this async, waiting for sessionActive
   // OR make it an empty proxy, with values that get filled it?
   // that's harder
@@ -49,7 +52,7 @@ class Remote extends InMem {
     const id = this.rawClient.transport.sessionData.id
     const val = await this.rawClient.waitForProperty(id, prop, timeout)
     if (val === undefined) return undefined
-    
+
     this.debug('raw sessionProperty value', val)
     return val
 
@@ -63,7 +66,7 @@ class Remote extends InMem {
   waitForSession () {
     return this.rawClient.waitForSession()
   }
-  
+
   close () {
     return this.rawClient.close()
   }

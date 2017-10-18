@@ -12,6 +12,7 @@ const fs = require('fs')
 const path = require('path')
 const atEnd = require('tape-end-hook')
 const mockDate = require('mockdate')
+const webgram = require('webgram')
 const datapages = require('..')
 const transport = require('./fake-transport')
 const debug = require('debug')('dp_test')
@@ -20,15 +21,28 @@ mockDate.set('2/1/1988', 120)
 const fakeNow = new Date()
 debug('date mocked to', fakeNow)
 
+const inBrowser = (typeof window === 'object')
+
+// this is who we ask to create fresh test servers, when we're running
+// in the client
+let masterServer
+if (inBrowser) {
+  masterServer = new webgram.Client(undefined, {useSessions: false})
+}
+
 tape.debug = debug
 tape.setups = []
 
 function filterSetups () {
-  const arg = process.env.SETUP
+  const arg = inBrowser ? window.SETUP : process.env.SETUP
   if (arg) {
     console.log('# filtering using SETUP =', arg)
+    const index = +arg
+    let count = 0
     for (const setup of tape.setups) {
-      if (setup.name.toLowerCase() !== arg.toLowerCase()) {
+      count++
+      if (setup.name.toLowerCase() !== arg.toLowerCase() &&
+         count !== index) {
         setup.skip = true
         debug('skipping', setup.name)
       } else {
@@ -70,20 +84,33 @@ tape.multi.skip = (restrictions, name, cb) => {
 
 }
 
+// include options:{doOwners:true} if you want the server to be set up
+// with doOwners for the test.  The problem is that stuff is noise to a
+// lot of tests.
+
 function multitest (restrictions, name, cb, test) {
+  const only = restrictions.only
+  delete restrictions.only
+  const options = restrictions.options || {}
+  delete restrictions.options
+
   for (const setup of tape.setups) {
     debug('multitest setup = %o', setup)
     if (setup.skip) continue
     let wanted = true
-    for (const key of Object.keys(restrictions)) {
-      if ((!!setup[key]) !== (!!restrictions[key])) wanted = false
+    if (only) {
+      if (only !== setup.name) wanted = false
+      debug('"only" running setup=%j (this is %j, wanted=%s),',
+            only, setup.name, wanted)
+    } else {
+      for (const key of Object.keys(restrictions)) {
+        if ((!!setup[key]) !== (!!restrictions[key])) wanted = false
+      }
     }
     if (!wanted) continue
-    if (typeof window === 'object') {  // we're in a browser
-      if (!setup.browser) continue
-    }
-    
-    const rname = name + ' [setup=' + setup.name + ']'
+    if (inBrowser && !setup.browser) continue
+
+    const rname = name + ' [ SETUP=' + setup.name + ' ]'
     test(rname, async (t) => {
       atEnd(t, () => {
         // t.comment('ended: ' + rname)
@@ -94,6 +121,7 @@ function multitest (restrictions, name, cb, test) {
           setTimeout(resolve, ms)
         })
       }
+      t.options = options
       await setup.init(t)
       if (t.db) {
         atEnd(t, () => {
@@ -142,9 +170,9 @@ async function tmpfile (suffix) {
 
 // restriction flags
 const proxy = true // t.db implements proxy interface (not raw interface)
-const server = true // t.server will be setup, t.anotherClient() defined
+// const server = true // t.server will be setup, t.anotherClient() defined
 // const view = true
-const browser = true // should work in browser, too
+const browser = true // this setup works in a browsers (ie okay without fs)
 const client = true // t.db is a client
 const raw = true // t.db implements raw interface (not proxy interface)
 const ws = true // uses websockets
@@ -167,6 +195,7 @@ setup({
   }
 })
 
+// this is the only one right now that DOESN'T work in browser
 setup({
   name: 'flatfile',
   init: async (t) => {
@@ -175,61 +204,86 @@ setup({
   }
 })
 
+async function fakeInit (t, ClientClass) {
+  const servOpts = {}
+  const f = new transport.Server()
+  servOpts.transport = f
+  servOpts.doOwners = t.options.doOwners
+  debug('doOwners = %s', servOpts.doOwners)
+  if (!servOpts.db) servOpts.db = new datapages.MinDB()
+  const s = new datapages.Server(servOpts)
+  const c = new datapages.RawClient({transport: f.connectedClient()})
+  atEnd(t, () => {
+    return Promise.all([
+      c.close(),
+      s.close()
+    ])
+  })
+  t.db = c
+}
+
+async function wsInit (t, ClientClass) {
+  const clientOptions = {}
+  const servOpts = {}
+  servOpts.doOwners = t.options.doOwners
+  debug('doOwners = %s', servOpts.doOwners)
+
+  if (inBrowser) {
+    const answer = await masterServer.ask('newServer', servOpts)
+    debug('masterServer responded %o', answer)
+    clientOptions.serverAddress = answer.wsAddress
+    atEnd(t, () => {
+      return masterServer.ask('delServer', answer)
+    })
+  } else {
+    servOpts.db = new datapages.MinDB()
+    servOpts.sessionOptions = {
+      serverSecretsDBName: await tmpfile('server-secrets')
+    }
+    const s = new datapages.Server(servOpts)
+    await s.transport.start()
+    clientOptions.serverAddress = s.transport.address
+    atEnd(t, () => {
+      s.close()
+    })
+  }
+
+  // resume will sometimes have us trying to reuse auth for a test server
+  // from the past that happened to use the same port
+  clientOptions.skipResume = true
+
+  t.db = new ClientClass(clientOptions)
+
+  atEnd(t, () => {
+    t.db.close()
+  })
+}
+
 setup({
   name: 'rawclient-inprocess-mindb-server',
   browser,
   raw,
   client,
   init: async (t) => {
-    const servOpts = {}
-    const f = new transport.Server()
-    servOpts.transport = f
-    servOpts.doOwners = true
-    if (!servOpts.db) servOpts.db = new datapages.MinDB()
-    const s = new datapages.Server(servOpts)
-    const c = new datapages.RawClient({transport: f.connectedClient()})
-    atEnd(t, () => {
-      return Promise.all([
-        c.close(),
-        s.close()
-      ])
-    })
-    
-    t.db = c
+    await fakeInit(t, datapages.RawClient)
   }
 })
 
-async function wsInit(t, ClientClass) {
-  const servOpts = {}
-  servOpts.doOwners = true
-  servOpts.db = new datapages.MinDB()
-  servOpts.sessionOptions = {
-    serverSecretsDBName: await tmpfile('server-secrets')
+setup({
+  name: 'proxyclient-inprocess-mindb-server',
+  browser,
+  proxy,
+  client,
+  init: async (t) => {
+    await fakeInit(t, datapages.Remote)
   }
-  
-  const s = new datapages.Server(servOpts)
-
-  await s.transport.start()
-
-  const options = {
-    serverAddress: s.transport.address,
-    skipResume: true // otherwise we might reuse auth for old test server on same port
-  }
-
-  t.db = new ClientClass(options)
-  
-  atEnd(t, () => {
-    return Promise.all([
-      t.db.close(),
-      s.close()
-    ])
-  })
-}
+})
 
 setup({
   name: 'rawclient-ws-mindb-server',
   raw,
   client,
+  browser, // via our crazy masterServer trick
   ws,
   init: async (t) => {
     await wsInit(t, datapages.RawClient)
@@ -240,12 +294,12 @@ setup({
   name: 'proxyclient-ws-mindb-server',
   proxy,
   client,
+  browser, // via our crazy masterServer trick
   ws,
   init: async (t) => {
     await wsInit(t, datapages.Remote)
   }
 })
-
 
 /*
   setup({

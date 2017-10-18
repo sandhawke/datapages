@@ -1,6 +1,7 @@
 *~
 /node_modules
 /OLD
+test/OLD
 events.log
 coverage
 static/bundle*

@@ -2,7 +2,7 @@
 
 const test = require('./setup')
 
-test.multi({proxy: true}, 'simple group by', t => {
+test.multi({proxy: true, only: 'inmem'}, 'simple group by', t => {
   const v = t.db.view({
     filter: {},
     groupBy: 'breed'
@@ -18,4 +18,3 @@ test.multi({proxy: true}, 'simple group by', t => {
   })
   t.end()
 })
-

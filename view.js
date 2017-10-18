@@ -1,7 +1,7 @@
 'use strict'
 
 const debug = require('debug')('datapages_view')
-const EventEmitter = require('eventemitter3')
+// const EventEmitter = require('eventemitter3')
 const Filter = require('./filter').Filter
 const BaseDB = require('./basedb')
 
@@ -62,7 +62,7 @@ class View extends BaseDB {
     }
     throw Error('page created in view does not pass view filter')
   }
-  
+
   _add (page, delta, emit) {
     this.members.add(page, delta)
     if (this.groupBy) {
@@ -94,7 +94,7 @@ class View extends BaseDB {
     if (typeof by === 'string') {
       const result = page[by]
       if (scalar(result)) return result
-      throw Error ('groupBy only implemented for scalar values')
+      throw Error('groupBy only implemented for scalar values')
     }
     if (Array.isArray(by)) {
       const result = []
@@ -103,7 +103,7 @@ class View extends BaseDB {
         if (scalar(val)) {
           result.push(val)
         } else {
-          throw Error ('groupBy only implemented for scalar values')
+          throw Error('groupBy only implemented for scalar values')
         }
       }
       // hm, we can't just return the array, because Map will map
@@ -115,9 +115,9 @@ class View extends BaseDB {
       // work.  JSON it is.
       return JSON.stringify(result)
     }
-    throw Error ('if defined, groupBy must be string or array of strings')
+    throw Error('if defined, groupBy must be string or array of strings')
   }
-  
+
   async maxSeq () {
     return this.base.maxSeqUsed
   }
@@ -170,7 +170,6 @@ class View extends BaseDB {
     return [wasIn, passes]
   }
 
-  
   passes (page) {
     if (page._deleted) return false
     return this.filterObject.passes(page)
@@ -215,21 +214,21 @@ class View extends BaseDB {
 
   listenSince (seq, ev, fn) {
     switch (ev) {
-    case 'change':
-      return this.base.listenSince(seq, ev, (pg, delta) => {
-        if (this.passes(pg)) fn(pg, delta)
-      })
-    case 'appear':  // not sure this is right....
+      case 'change':
+        return this.base.listenSince(seq, ev, (pg, delta) => {
+          if (this.passes(pg)) fn(pg, delta)
+        })
+      case 'appear':  // not sure this is right....
       // do this first so we don't miss any?   and we don't care about order?
-      this.on('appear', fn)
-      for (const page of this.items()) {
-        fn(page)
-      }
-      return Promise.resolve()
-    case 'disappear':  // or this...
-      this.on('disappear', fn)
-      return Promise.resolve()
-    default:
+        this.on('appear', fn)
+        for (const page of this.items()) {
+          fn(page)
+        }
+        return Promise.resolve()
+      case 'disappear':  // or this...
+        this.on('disappear', fn)
+        return Promise.resolve()
+      default:
         throw Error(`unknown listenSince event "${ev}"`)
     }
   }

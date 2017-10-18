@@ -15,7 +15,7 @@ test.multi('create-set-listen', t => {
   })
 })
 
-test.multi('create-listen-set', t => {
+test.multi.skip('create-listen-set', t => {
   const created = t.db.create()
   t.db.listenSince(0, 'change', async (pg, delta) => {
     // BUG t.equal(pg, created)

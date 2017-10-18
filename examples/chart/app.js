@@ -1,6 +1,8 @@
 'use strict'
 
-const c3 = require('c3')
+// HALF WRITTEN -- DOESNT WORK AT ALL
+
+// const c3 = require('c3')
 const datapages = require('datapages')
 
 const db = new datapages.Remote(window.serverAddress)
@@ -10,7 +12,7 @@ body.innerHTML = `<div>
 <button id="create">Create Box</button>
 </div>`
 
-const status  = document.createElement('div')
+const status = document.createElement('div')
 body.appendChild(status)
 status.style.position = 'absolute'
 
@@ -18,14 +20,14 @@ status.style.position = 'absolute'
 
 const samples = db.view(
   {painter,
-   filter:
-   {time: {required: true}} 
+    filter:
+   {time: {required: true}}
   })
 
 // painter is called with iterable, never overlapping, not too often,
 // after data hasn't changed in a little while
 function painter (pages) {
-  
+
 }
 
 samples.listenSince(0, 'appear', (page, delta) => {
@@ -50,9 +52,8 @@ samples.listenSince(0, 'appear', (page, delta) => {
     box.innerHTML = '<p>created by session ' + (delta.who || db.sessionData.id) + '</p><p>anyone can click to close</p>'
   }
 })
-  
 
-boxes.listenSince(0, 'change', (page, delta) => {
+samples.listenSince(0, 'change', (page, delta) => {
   let box = page.__box
   if (box) {
     box.style.top = '' + page.top + 'px'
@@ -62,7 +63,7 @@ boxes.listenSince(0, 'change', (page, delta) => {
   }
 })
 
-boxes.on('disappear', page => {
+samples.on('disappear', page => {
   let box = page.__box
   box.style.display = 'none'
 })
