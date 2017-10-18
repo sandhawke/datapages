@@ -116,6 +116,8 @@ function multitest (restrictions, name, cb, test) {
         // t.comment('ended: ' + rname)
       })
       t.debug = debug
+      t.deltas = []
+      t.logDelta = logDeltaFunc(t)  // maybe call this logSimplifiedDelta
       t.sleep = (ms) => {
         return new Promise((resolve) => {
           setTimeout(resolve, ms)
@@ -123,6 +125,8 @@ function multitest (restrictions, name, cb, test) {
       }
       t.options = options
       await setup.init(t)
+      // might some day make this depend on the setup...
+      t.unrelatedDB = (name) => new datapages.InMem({name})
       if (t.db) {
         atEnd(t, () => {
           t.db.close()
@@ -135,6 +139,32 @@ function multitest (restrictions, name, cb, test) {
     })
   }
   debug('multitest %j returning', name)
+}
+
+function logDeltaFunc (t) {
+  return (delta) => {
+    const d = {}
+    d.subject = delta.subject
+    d.property = delta.property
+    d.value = delta.value
+    d.oldValue = delta.oldValue
+    if (d.oldValue === undefined) delete d.oldValue
+
+    if (typeof d.subject === 'object') {
+      const subj = {}
+      for (const key of Object.keys(d.subject)) {
+        // Object.keys will naturally skip Symbols
+        if (key.startsWith('__')) continue
+        if (key === '_owner') continue
+        subj[key] = d.subject[key]
+      }
+      d.subject = subj
+    }
+    t.debug('logging delta, cleaned')
+    t.debug(' from %o', delta)
+    t.debug(' to   %o', d)
+    t.deltas.push(d)
+  }
 }
 
 function setup (x) {

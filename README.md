@@ -53,18 +53,22 @@ browser.
 ```shell
 $ npm test
 
+
+test/test-bridge.js ................................. 12/12
+test/test-db.js ..................................... 42/42
 test/test-filter.js ................................. 37/37
-test/test-groupby.js .................................. 1/1 256ms
+test/test-groupby.js .................................. 1/1 258ms
 test/test-listen.js ................................. 21/21
 test/test-session.js .................................. 3/3
-test/test-store.js .................................... 9/9 4s
+test/test-store.js .................................... 9/9 8s
 test/test-view.js ................................... 22/22
 test/test-wait-for-property.js ...................... 35/35
-test/browser-test.js .............................. 222/222
-total ............................................. 350/351
+test/browser-test.js .............................. 330/330
+total ............................................. 512/512
 
-  350 passing (16s)
-  1 pending
+  512 passing (22s)
+
+  ok
 ```
 
 There's a fair amount of magic in test/setup.js and
