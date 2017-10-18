@@ -47,6 +47,10 @@ class Connection extends EventEmitter {
 
 class Client extends EventEmitter {
   close () {}
+
+  async waitForSession () {
+
+  }
 }
 
 module.exports.Server = Server
