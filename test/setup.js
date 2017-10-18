@@ -204,48 +204,35 @@ setup({
   }
 })
 
-async function fakeInit (t, ClientClass) {
-  const servOpts = {}
-  const f = new transport.Server()
-  servOpts.transport = f
-  servOpts.doOwners = t.options.doOwners
-  debug('doOwners = %s', servOpts.doOwners)
-  if (!servOpts.db) servOpts.db = new datapages.MinDB()
-  const s = new datapages.Server(servOpts)
-  const c = new datapages.RawClient({transport: f.connectedClient()})
-  atEnd(t, () => {
-    return Promise.all([
-      c.close(),
-      s.close()
-    ])
-  })
-  t.db = c
-}
-
-async function wsInit (t, ClientClass) {
+async function netInit (t, ClientClass, ws) {
   const clientOptions = {}
   const servOpts = {}
   servOpts.doOwners = t.options.doOwners
   debug('doOwners = %s', servOpts.doOwners)
+  servOpts.db = new datapages.MinDB()
 
-  if (inBrowser) {
-    const answer = await masterServer.ask('newServer', servOpts)
-    debug('masterServer responded %o', answer)
-    clientOptions.serverAddress = answer.wsAddress
-    atEnd(t, () => {
-      return masterServer.ask('delServer', answer)
-    })
-  } else {
-    servOpts.db = new datapages.MinDB()
-    servOpts.sessionOptions = {
-      serverSecretsDBName: await tmpfile('server-secrets')
+  if (ws) {
+    if (inBrowser) {
+      delete servOpts.db // but say we want mindb?
+      const answer = await masterServer.ask('newServer', servOpts)
+      debug('masterServer responded %o', answer)
+      clientOptions.serverAddress = answer.wsAddress
+      atEnd(t, () => masterServer.ask('delServer', answer))
+    } else {
+      servOpts.sessionOptions = {
+        serverSecretsDBName: await tmpfile('server-secrets')
+      }
+      const s = new datapages.Server(servOpts)
+      await s.transport.start()
+      clientOptions.serverAddress = s.transport.address
+      atEnd(t, () => s.close())
     }
+  } else {
+    const f = new transport.Server()
+    servOpts.transport = f
     const s = new datapages.Server(servOpts)
-    await s.transport.start()
-    clientOptions.serverAddress = s.transport.address
-    atEnd(t, () => {
-      s.close()
-    })
+    atEnd(t, () => s.close())
+    clientOptions.transport = f.connectedClient()
   }
 
   // resume will sometimes have us trying to reuse auth for a test server
@@ -254,9 +241,7 @@ async function wsInit (t, ClientClass) {
 
   t.db = new ClientClass(clientOptions)
 
-  atEnd(t, () => {
-    t.db.close()
-  })
+  atEnd(t, () => t.db.close())
 }
 
 setup({
@@ -265,7 +250,7 @@ setup({
   raw,
   client,
   init: async (t) => {
-    await fakeInit(t, datapages.RawClient)
+    await netInit(t, datapages.RawClient, false)
   }
 })
 
@@ -275,7 +260,7 @@ setup({
   proxy,
   client,
   init: async (t) => {
-    await fakeInit(t, datapages.Remote)
+    await netInit(t, datapages.Remote, false)
   }
 })
 
@@ -286,7 +271,7 @@ setup({
   browser, // via our crazy masterServer trick
   ws,
   init: async (t) => {
-    await wsInit(t, datapages.RawClient)
+    await netInit(t, datapages.RawClient, true)
   }
 })
 
@@ -297,7 +282,7 @@ setup({
   browser, // via our crazy masterServer trick
   ws,
   init: async (t) => {
-    await wsInit(t, datapages.Remote)
+    await netInit(t, datapages.Remote, true)
   }
 })
 
