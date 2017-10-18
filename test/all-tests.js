@@ -3,4 +3,5 @@ window.localStorage.debug = ''
 require('./test-groupby.js')
 require('./test-listen.js')
 require('./test-session.js')
+require('./test-store.js')
 require('./test-wait-for-property.js')
