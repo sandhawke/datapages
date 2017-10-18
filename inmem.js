@@ -208,7 +208,7 @@ class InMem extends BaseDB {
     this.debug('  target is %o', target)
 
     // but ... we want the proxy for their sessionData, not the number
-    if (target._owner === undefined) target._owner = delta.who
+    if (target._owner === undefined && delta.who) target._owner = delta.who
 
     // WISH LIST: check that the value is allowed by all our async Validators
 
