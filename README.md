@@ -85,3 +85,8 @@ $ DEBUG=* SETUP=7 node test/test-view.js
 ```
 
 If that setup isn't supported for that test, it wont run any test.
+
+If the debugging output is large, and it's not clear which modules to
+turn off (DEBUG=*,-webgram*), I sometimes run it inside an emacs
+"shell" window, which has better search (while still having the output
+colorized) than my terminal.
