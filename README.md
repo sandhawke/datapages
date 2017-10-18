@@ -5,10 +5,12 @@ data, suitable for use in webapps.
 Client code instantiates datapages.Remote() which connects to the
 server and gives a read/write view of a shared set of "pages" (aka
 "documents" or "objects" or "records").  Changes propagate quickly and
-can optionally persist on the server.
+persist on the server. Currently full change history is maintained by
+the default server.
 
 API style takes some inspriration from my earlier
 [crosscloud.js](https://github.com/sandhawke/crosscloud.js/blob/master/doc/planned-api.md)
+
 
 ## Example
 
@@ -24,6 +26,11 @@ const datapages = require('datapages')
 
 const db = datapages.Remote()
 
+const dogs = db.view({filter: {isDog: true}})
+dogs.on('appear', dog => {
+  console.log('Found a dog! ', dog)
+})
+
 db.create({
   isDog: true,
   name: 'Fluffy',
@@ -32,14 +39,25 @@ db.create({
   born: new Date('July 15, 1976'), // not in canon
   weaknesses: [ { description: 'music induces sleep' } ]
 })
-
-const dogs = db.view({filter: {isDog: true}})
-dogs.on('appear', dog => {
-  console.log('Found a dog! ', dog)
-})
 ```
 
 See [API Documentation](https://sandhawke.github.io/datapages/docs/api.html)
+
+## Features
+
+* Very fast for small datasets (thousands of records)
+* Data records are JSON-compatible JavaScript objects
+* Objects can refer to each other naturally (like `alice.mother.mother.age`, cycles are okay)
+* Instances can be linked into a federation (eg between web client and web server), with efficient propagation
+* Easy to build live displays of dynamically-changing query results (no
+polling)
+* Change (delta) log is available for displaying history and provenance
+* (TODO) Supports temporal and provenance features (only show data resulting from sources a and b before time t)
+* (TODO) Supports transient records, aka event streaming
+* (TODO) Supports access control for use in multiuser backends
+* (TODO) Works with https://github.com/sandhawke/vocabspec[vocabspec] or https://github.com/sandhawke/data-sentence[data sentence]
+to handle schema validation, migration (with views), and integration
+* (TODO) Coordinate with a media server
 
 ## Tests
 
@@ -85,12 +103,12 @@ For debugging a failing test, focus in on it with:
 So you end up with something like:
 
 ```shell
-$ DEBUG=* SETUP=7 node test/test-view.js
+$ DEBUG=*,-web* SETUP=7 node test/test-view.js
 ```
 
 If that setup isn't supported for that test, it wont run any test.
 
 If the debugging output is large, and it's not clear which modules to
-turn off (DEBUG=*,-webgram*), I sometimes run it inside an emacs
-"shell" window, which has better search (while still having the output
-colorized) than my terminal.
+turn off, I sometimes run it inside an emacs "shell" window, which has
+better search than my terminal (while still having the output
+colorized).

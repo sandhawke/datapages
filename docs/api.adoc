@@ -22,7 +22,7 @@ polling)
 * (TODO) Works with https://github.com/sandhawke/vocabspec[vocabspec] or https://github.com/sandhawke/data-sentence[data sentence]
 to handle
 schema validation, migration (with views), and integration
-* (TODO) Supports streaming attached media blobs, eg JPEGs
+* (TODO) Coordinate with a media server
 
 == Design Concepts
 
