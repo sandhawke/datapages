@@ -84,21 +84,12 @@ class InMem extends BaseDB {
   }
   */
 
-  /*
-    Create a new proxy, setting its values according to the
-    overlay, and return it.  Proxies can be watched for on-change and
-    on-save, and when you change them, they automatically start
-    propagating the new value.  Because you can watch for 'save', we
-    return synchronously.
-   */
-  create (overlay) {
+  createBlank () {
+    // __rawreq is just for debugging, so we can see which obj is which
     const rawpage = { __rawseq: ++this.objCount }
-    // this.debug('rawpage 1 %o', rawpage)
     const proxy = new Proxy(rawpage, this.handler)
-    // this.debug('rawpage 2 %o', rawpage)
+    // not necessary and makes debugging hard because of all the cycles
     // rawpage.__proxy = proxy
-    // this.debug('rawpage 3 %o', rawpage)
-    if (overlay) this.overlay(proxy, overlay)
     this.debug('created %o', proxy)
     return proxy
   }
