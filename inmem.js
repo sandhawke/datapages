@@ -54,10 +54,12 @@ class InMem extends BaseDB {
   // this doesn't need to be async, but it is because for some other
   // implementations it might be reading off disk or network.
   async replaySince (seq, ev, fn) {
+    // console.log('replaying, deltas= %O', this.deltas)
     if (ev === 'change') {
       this.debug('replaySince begins')
       for (const delta of this.deltas) {
         if (delta.seq > seq) {
+          // console.log('outcalling delta %o', delta)
           fn(delta.subject, delta)
         }
       }

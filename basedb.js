@@ -129,6 +129,7 @@ class DB extends EventEmitter {
     this.debug('adding change listener')
     this.on('change', (pg, delta) => {
       if (buf) {
+        // console.log('listenSince doing buffering of delta %o', delta)
         buf.push(delta)
       } else {
         this.debug('calling listenSince listener without buffering')
@@ -138,12 +139,19 @@ class DB extends EventEmitter {
 
     this.debug('listenSince STARTING REPLAY')
     await this.replaySince(seq, ev, fn)
+    // a lot can happen here; we don't come back until after a tick
+    //
+    // if you don't wait for a tick, you'll never start getting events
     this.debug('listenSince resuming after replaySince')
 
     // loop as long as we need to, since fn might trigger more events
     while (buf.length) {
+      // console.log('BUF: %O', buf)
       const delta = buf.shift()
       this.debug('calling listenSince with buffered event')
+      if (delta.subject === undefined) {
+        throw Error('trap')
+      }
       fn(delta.subject, delta)
     }
     buf = false // flag to stop buffering

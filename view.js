@@ -38,17 +38,22 @@ class View extends BaseDB {
 
     this.base.on('disappear', (page, delta) => { this._delete(page, delta) })
 
-    this.base.on('change', (page, delta) => {
+    this.changeHandler = (page, delta) => {
+      this.debug('handling change from base %o', delta)
       const [was, is] = this.consider(page, delta)
       if (is) {
         debug('view emiting "delta"', was, is)
         // maybe:  delta.target = page ?
         this.emit('delta', delta)
       }
-    })
+    }
 
-    // Ummmm.  don't we need a replay?  I mean, ... how/when is groups
-    // and members going to be loaded up?   But it's async.  :-/
+    // this is kinda horrible.  We can't replay yet, because no one
+    // has had a chance to attach listeners.  Oh maybe that's okay,
+    // when they do we'll just run through again, as we do.
+
+    // this.base.on('change', this.changeHandler)
+    this.base.listenSince(0, 'change', this.changeHandler)
   }
 
   createBlank () {
@@ -193,7 +198,52 @@ class View extends BaseDB {
 
   items () {
     debug('items() called')
-    return this.members.values()
+    let result = this.members.values()
+
+    // TEMPORARY HACK: this should be done differently, so that
+    // appear/disappear are emitted for things going out of the limit,
+    // and of course this isn't a very efficient approach.
+    if (this.sortBy) {
+      result = Array.from(result)
+      const f = (a, b) => {
+        const va = a[this.sortBy]
+        const vb = b[this.sortBy]
+        if (va < vb) return -1
+        if (va > vb) return 1
+        return 0
+      }
+      result.sort(f)
+      if (this.limit !== undefined) {
+        result.splice(this.limit)
+      }
+      // console.log('sorted', result.map(x => x.name))
+
+      result = result[Symbol.iterator](result)
+    }
+
+    return result
+  }
+
+  get size () {
+    return this.members.size
+  }
+
+  get length () {
+    return this.members.size
+  }
+
+  only (onZero, onMany) {
+    const results = Array.from(this)
+    this.debug('only() found items', results)
+    if (results.length === 0) {
+      if (onZero === undefined) throw Error('constraint violation with "only"')
+      return onZero
+    }
+    if (results.length > 1) {
+      if (onMany === undefined) throw Error('constraint violation with "only"')
+      return onMany
+    }
+    return results[0]
   }
 
   async add (page) {
