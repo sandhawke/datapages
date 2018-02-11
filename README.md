@@ -112,3 +112,11 @@ If the debugging output is large, and it's not clear which modules to
 turn off, I sometimes run it inside an emacs "shell" window, which has
 better search than my terminal (while still having the output
 colorized).
+
+## Credits and Disclaimer
+
+This material is based upon work supported by the National Science
+Foundation under Grant No. 1313789.  Any opinions, findings, and
+conclusions or recommendations expressed in this material are those of
+the author(s) and do not necessarily reflect the views of the National
+Science Foundation.
