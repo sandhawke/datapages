@@ -15,7 +15,7 @@
     "url": "git+https://github.com/sandhawke/datapages.git"
   },
   "author": "Sandro Hawke (http://hawke.org/sandro)",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/sandhawke/datapages/issues"
   },

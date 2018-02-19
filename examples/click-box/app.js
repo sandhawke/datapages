@@ -24,6 +24,7 @@ create.onclick = function (ev) {
       50 + Math.round(Math.random() * 200),
       50 + Math.round(Math.random() * 200) ]
   })
+  console.log('created box in the database')
 }
 
 const boxes = db.view(
@@ -45,11 +46,18 @@ boxes.listenSince(0, 'appear', (page, delta) => {
     box.style.height = '200px'
     box.style.border = '1px solid black'
     box.style.position = 'absolute'
+
+    // didnt need these before, when page.__box worked
+    // box.style.top = '' + page.top + 'px'
+    // box.style.left = '' + page.left + 'px'
+    // const [red, green, blue] = page.rgb
+    // box.style.background = `rgb(${red},${green},${blue})`
+
     page.__box = box
-    console.log('created box', box, page)
+    console.log('notified of new box in db, adding to screen', box, page)
     body.appendChild(box)
     box.addEventListener('click', ev => {
-      console.log('DELETE', page)
+      console.log('on-screen box clicked; deleting from db', page)
       db.delete(page)
     })
     // could do a drag-watcher, too...
@@ -58,16 +66,27 @@ boxes.listenSince(0, 'appear', (page, delta) => {
 })
 
 boxes.listenSince(0, 'change', (page, delta) => {
+  console.log('notified that box data has changed, updating screen', page)
   let box = page.__box
   if (box) {
     box.style.top = '' + page.top + 'px'
     box.style.left = '' + page.left + 'px'
     const [red, green, blue] = page.rgb
     box.style.background = `rgb(${red},${green},${blue})`
+  } else {
+    console.log('... except it is not on the screen yet')
+    console.log('page is %O', page)
+    console.log('box is %o', box)
+    console.log('target is is %o', page.__target)
   }
 })
 
 boxes.on('disappear', page => {
+  console.log('notified that box went away, removing from screen', page)
   let box = page.__box
-  box.style.display = 'none'
+  if (box) {
+    box.style.display = 'none'
+  } else {
+    console.log('... except it is not on the screen yet')
+  }
 })

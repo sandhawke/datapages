@@ -172,6 +172,11 @@ class InMem extends BaseDB {
       }
     }
 
+    // refs doesn't come into play if it's a local __ name
+    if (name.startsWith('__')) {
+      return target[name]
+    }
+
     return this.refs.from(target[name]) // should wrap, really
   }
 

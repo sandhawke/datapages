@@ -62,10 +62,16 @@ class View extends BaseDB {
 
   create (...args) {
     const page = super.create(...args)
+    debug('page created: %O', page)
     if (this.passes(page)) {
       return page
     }
-    throw Error('page created in view does not pass view filter')
+    // This would be nice, in terms of catching errors, but it
+    // doesn't work, because if the view is on a Remote db, the
+    // changes don't happen synchronously
+
+    // throw Error('page created in view does not pass view filter')
+    return null
   }
 
   _add (page, delta, emit) {
@@ -204,6 +210,10 @@ class View extends BaseDB {
     // appear/disappear are emitted for things going out of the limit,
     // and of course this isn't a very efficient approach.
     if (this.sortBy) {
+      if (typeof this.sortBy !== 'string') {
+        // not a function, people, not a function
+        throw Error('sortBy should be a string which names a property')
+      }
       result = Array.from(result)
       const f = (a, b) => {
         const va = a[this.sortBy]

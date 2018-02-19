@@ -13,6 +13,7 @@ class Remote extends InMem {
   async applyDelta (delta) {
     // put our sessionID in asap, so local code can stop caring if
     // this delta is from local or remote.
+    this.debug('remote.applyDelta %o', delta)
     await this.waitForSession()
     if (delta.who === undefined) delta.who = this.sessionID
 

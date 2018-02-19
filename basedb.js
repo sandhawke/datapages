@@ -77,6 +77,7 @@ class DB extends EventEmitter {
   */
 
   setProperty (subject, property, value, who, when, why, ondurable) {
+    this.debug('setProperty %o=%o', property, value)
     let delta
 
     if (property === undefined || typeof property === 'function') {
